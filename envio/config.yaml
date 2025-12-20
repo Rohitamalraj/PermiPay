@@ -1,0 +1,29 @@
+name: permipay-analytics
+description: Permission-metered billing indexer for PermiPay Analytics
+networks:
+  - id: 11155111 # Ethereum Sepolia
+    start_block: 0
+    contracts:
+      - name: PermiPayBilling
+        address: 
+          - "0x0000000000000000000000000000000000000000" # Placeholder - update after deployment
+        handler: src/EventHandlers.ts
+        events:
+          - event: PermissionGranted(address indexed user, uint256 spendingLimit, uint256 expiresAt, uint256 timestamp)
+          - event: ServiceExecuted(address indexed user, uint8 indexed serviceType, uint256 cost, uint256 remainingBudget, uint256 timestamp)
+          - event: PermissionRevoked(address indexed user, uint256 timestamp)
+      - name: ServiceRegistry
+        address:
+          - "0x0000000000000000000000000000000000000000" # Placeholder - update after deployment
+        handler: src/EventHandlers.ts
+        events:
+          - event: ServiceAdded(uint8 indexed serviceId, string name, uint256 price)
+          - event: ServiceUpdated(uint8 indexed serviceId, uint256 newPrice)
+          - event: ServiceToggled(uint8 indexed serviceId, bool isActive)
+
+field_selection:
+  transaction_fields:
+    - "from"
+    - "to"
+    - "hash"
+    - "transactionIndex"

@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --gradient-primary: linear-gradient(135deg, #0052FF 0%, #3387FF 100%);
+  --gradient-secondary: linear-gradient(135deg, #3387FF 0%, #0066FF 100%);
+}
+
+.hero-gradient {
+  background: radial-gradient(
+    circle at 50% 0%,
+    rgba(0, 82, 255, 0.15) 0%,
+    rgba(51, 135, 255, 0.05) 30%,
+    rgba(0, 0, 0, 0) 70%
+  );
+}
+
+.dotted-grid {
+  background-image: radial-gradient(circle, #ffffff 1px, transparent 1px);
+  background-size: 24px 24px;
+  opacity: 0.1;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-black text-white antialiased;
+  }
+}
