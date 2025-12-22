@@ -333,7 +333,7 @@ export default function WalletReputationPage() {
             <p className="text-gray-400">
               Enter a wallet address above to analyze reputation
             </p>
-          </div>
+          </Card>
         )}
       </div>
     </div>

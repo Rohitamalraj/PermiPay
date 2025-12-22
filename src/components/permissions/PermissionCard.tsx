@@ -36,6 +36,7 @@ export function PermissionCard({
     isLoading,
     error,
     sessionAccountAddress,
+    smartAccountAddress,
     requestPermission,
     getPermissionStatus,
   } = useAdvancedPermissions();

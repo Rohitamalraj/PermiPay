@@ -102,38 +102,40 @@ export function SmartAccountSetup() {
 
         {hasSmartAccount === false && (
           <>
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
+            <Alert className="bg-yellow-500/10 border-yellow-500/20">
+              <AlertCircle className="h-4 w-4 text-yellow-400" />
               <AlertDescription>
-                <strong>Smart Account Not Found</strong>
+                <strong className="text-yellow-400">Smart Account Required</strong>
                 <br />
-                You need to upgrade your account to use Advanced Permissions.
+                Advanced Permissions (ERC-7715) require a MetaMask Smart Account. 
+                <strong> MetaMask Flask will automatically prompt you to upgrade</strong> when you request permissions below.
               </AlertDescription>
             </Alert>
 
-            <div className="space-y-3">
-              <h4 className="text-sm font-semibold">How to upgrade:</h4>
-              <ol className="text-sm text-gray-300 space-y-2 list-decimal list-inside">
-                <li>Install MetaMask Flask (developer version)</li>
-                <li>Create or upgrade to a Smart Account</li>
-                <li>Return here to grant permissions</li>
-              </ol>
+            <div className="space-y-4">
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+                <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                  <Rocket className="h-4 w-4 text-blue-400" />
+                  How Smart Account Upgrade Works
+                </h4>
+                <ol className="text-sm text-gray-300 space-y-2 list-decimal list-inside ml-2">
+                  <li>Click <strong>"Request Permission"</strong> below for any service</li>
+                  <li>MetaMask Flask will detect you need a Smart Account</li>
+                  <li>Flask will <strong>automatically prompt you to upgrade</strong></li>
+                  <li>Approve the upgrade in the Flask popup</li>
+                  <li>Your permission request continues normally</li>
+                </ol>
+              </div>
 
               <div className="flex gap-2">
                 <Button
-                  asChild
+                  onClick={handleCheckSmartAccount}
                   variant="outline"
                   size="sm"
                   className="flex-1"
                 >
-                  <a 
-                    href="https://docs.metamask.io/snaps/get-started/install-flask/" 
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Install Flask
-                    <ExternalLink className="h-3 w-3 ml-1" />
-                  </a>
+                  <ArrowRight className="h-4 w-4 mr-2" />
+                  Recheck Status
                 </Button>
                 <Button
                   asChild
@@ -142,15 +144,24 @@ export function SmartAccountSetup() {
                   className="flex-1"
                 >
                   <a 
-                    href="https://docs.metamask.io/smart-accounts-kit/" 
+                    href="https://chromewebstore.google.com/detail/metamask-flask-developmen/ljfoeinjpaedjfecbmggjgodbgkmjkjk" 
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    Learn More
+                    Get Flask
                     <ExternalLink className="h-3 w-3 ml-1" />
                   </a>
                 </Button>
               </div>
+
+              <Alert className="bg-gray-900/50 border-gray-800">
+                <AlertCircle className="h-4 w-4 text-gray-400" />
+                <AlertDescription className="text-xs">
+                  <strong>Note:</strong> You're already using MetaMask Flask (regular MetaMask disabled). 
+                  The Smart Account upgrade happens automatically during your first permission request - 
+                  just proceed to request permissions below! 🚀
+                </AlertDescription>
+              </Alert>
             </div>
           </>
         )}

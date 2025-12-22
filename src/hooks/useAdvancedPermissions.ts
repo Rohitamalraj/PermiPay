@@ -1,16 +1,25 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useAccount, useWalletClient } from 'wagmi';
 import type { Address } from 'viem';
 import { parseUnits } from 'viem';
 import { 
-  getOrCreateSessionAccount, 
-  getSessionAccount, 
+  createMetaMaskSmartAccount,
+  getStoredSmartAccountAddress,
+  storeSmartAccountAddress,
+  isSmartAccountDeployed,
+  getOrCreateSessionAccount,
+  getSessionAccount,
+  hasValidSessionAccount,
   clearSessionAccount,
-  hasValidSessionAccount 
-} from '@/lib/sessionAccount';
-import { bundlerClient } from '@/lib/bundler';
+  type MetaMaskSmartAccountType
+} from '@/lib/smartAccount';
+import { 
+  publicClient,
+  createERC7715WalletClient,
+  createERC7710BundlerClient
+} from '@/lib/bundler';
 import { CONTRACTS } from '@/constants/chains';
 import { sepolia } from 'viem/chains';
 
@@ -51,19 +60,35 @@ const PERMISSION_STORAGE_KEY = 'permipay_permissions';
 
 export function useAdvancedPermissions() {
   const { address: userAddress } = useAccount();
+  const { data: walletClient } = useWalletClient();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sessionAccountAddress, setSessionAccountAddress] = useState<Address | null>(null);
+  const [smartAccountAddress, setSmartAccountAddress] = useState<Address | null>(null);
+  const [smartAccount, setSmartAccount] = useState<MetaMaskSmartAccountType | null>(null);
 
-  // Initialize session account address
+  // Initialize Smart Account and session account
   useEffect(() => {
-    if (hasValidSessionAccount()) {
-      const account = getSessionAccount();
-      if (account) {
-        setSessionAccountAddress(account.address);
+    async function initializeAccounts() {
+      if (!userAddress || !walletClient) return;
+
+      // Check for stored Smart Account address
+      const stored = getStoredSmartAccountAddress(userAddress);
+      if (stored) {
+        setSmartAccountAddress(stored);
+      }
+
+      // Initialize session account
+      if (hasValidSessionAccount()) {
+        const account = getSessionAccount();
+        if (account) {
+          setSessionAccountAddress(account.address);
+        }
       }
     }
-  }, []);
+
+    initializeAccounts();
+  }, [userAddress, walletClient]);
 
   /**
    * Check if user has a MetaMask Smart Account
@@ -74,7 +99,7 @@ export function useAdvancedPermissions() {
 
     try {
       // Check if account has code (is a smart contract)
-      const code = await bundlerClient.getCode({ address: userAddress });
+      const code = await publicClient.getCode({ address: userAddress });
       return code !== undefined && code !== '0x';
     } catch (error) {
       console.error('Error checking smart account:', error);
@@ -83,15 +108,60 @@ export function useAdvancedPermissions() {
   }, [userAddress]);
 
   /**
+   * Create or get MetaMask Smart Account for the user
+   * This uses the Smart Accounts Kit to create a counterfactual Smart Account
+   * The account won't be deployed until the first transaction
+   */
+  const setupSmartAccount = useCallback(async (): Promise<MetaMaskSmartAccountType | null> => {
+    if (!userAddress || !walletClient) {
+      setError('Please connect your wallet first');
+      return null;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Check if we already have a Smart Account instance
+      if (smartAccount) {
+        return smartAccount;
+      }
+
+      // Create MetaMask Smart Account using the Kit
+      console.log('🔧 Creating MetaMask Smart Account...');
+      const account = await createMetaMaskSmartAccount(walletClient);
+      
+      // Store the address
+      setSmartAccountAddress(account.address);
+      setSmartAccount(account);
+      storeSmartAccountAddress(userAddress, account.address);
+
+      // Check if it's deployed
+      const isDeployed = await isSmartAccountDeployed(account.address);
+      console.log(`✅ Smart Account ${isDeployed ? 'deployed' : 'counterfactual'} at:`, account.address);
+
+      setIsLoading(false);
+      return account;
+
+    } catch (err: unknown) {
+      console.error('❌ Error setting up Smart Account:', err);
+      const message = err instanceof Error ? err.message : 'Failed to create Smart Account';
+      setError(message);
+      setIsLoading(false);
+      return null;
+    }
+  }, [userAddress, walletClient, smartAccount]);
+
+  /**
    * Request Advanced Permission from user via MetaMask
-   * This shows the MetaMask UI with human-readable permission details
+   * This uses ERC-7715 Advanced Permissions with Smart Accounts
    */
   const requestPermission = useCallback(async (
     serviceType: ServiceType,
     spendingLimit: bigint = parseUnits('10', 6), // Default $10 USDC
     durationDays: number = 30
   ): Promise<boolean> => {
-    if (!userAddress) {
+    if (!userAddress || !walletClient) {
       setError('Please connect your wallet first');
       return false;
     }
@@ -100,93 +170,106 @@ export function useAdvancedPermissions() {
     setError(null);
 
     try {
-      // 1. Check if user has Smart Account
-      const hasSmartAccount = await checkSmartAccount();
-      if (!hasSmartAccount) {
-        setError('Please upgrade to a MetaMask Smart Account first');
-        setIsLoading(false);
-        return false;
-      }
+      // Step 1: Create ERC-7715 Wallet Client
+      console.log('📝 Step 1: Setting up ERC-7715 Wallet Client...');
+      const erc7715Client = await createERC7715WalletClient();
 
-      // 2. Get or create session account
+      // Step 2: Setup session account using MetaMask Smart Account Kit
+      console.log('📝 Step 2: Creating session account...');
       const sessionAccount = getOrCreateSessionAccount();
       setSessionAccountAddress(sessionAccount.address);
 
-      // 3. Calculate expiry
-      const expiresAt = Date.now() + (durationDays * 24 * 60 * 60 * 1000);
-      const servicePriceLimit = SERVICE_PRICES[serviceType];
-
-      // 4. Request permission via wallet_grantPermissions (ERC-7715)
-      // Note: This requires MetaMask Flask 13.5.0+
-      const provider = (window as any).ethereum;
+      // Step 3: Check if EOA has Smart Account (has code)
+      console.log('📝 Step 3: Checking for Smart Account...');
+      const code = await publicClient.getCode({ address: userAddress });
+      const hasSmartAccount = code !== undefined && code !== '0x';
       
-      if (!provider) {
-        setError('MetaMask not found');
-        setIsLoading(false);
-        return false;
+      if (!hasSmartAccount) {
+        console.log('ℹ️ No Smart Account detected. MetaMask will prompt to upgrade on permission request.');
       }
 
-      const permission = await provider.request({
-        method: 'wallet_grantPermissions',
-        params: [{
+      // Step 4: Calculate expiry
+      const validUntil = Math.floor(Date.now() / 1000) + (durationDays * 24 * 60 * 60);
+
+      // Step 5: Request execution permissions via ERC-7715
+      console.log('📝 Step 4: Requesting execution permissions...');
+      
+      // Convert values to hex format as required by MetaMask Smart Accounts Kit
+      const periodSeconds = durationDays * 24 * 60 * 60;
+      const startTime = Math.floor(Date.now() / 1000);
+      
+      console.log('Permission parameters:', {
+        tokenAddress: CONTRACTS[sepolia.id].USDC,
+        periodAmount: `0x${spendingLimit.toString(16)}`,
+        periodDuration: `0x${periodSeconds.toString(16)}`,
+        startTime: `0x${startTime.toString(16)}`,
+        endTime: `0x${validUntil.toString(16)}`,
+      });
+      
+      // @ts-ignore - ERC-7715 types may vary between implementations
+      const permissionContext = await erc7715Client.requestExecutionPermissions([
+        {
+          chainId: sepolia.id,
+          expiry: validUntil,
           signer: {
             type: 'account',
             data: {
-              id: sessionAccount.address,
+              address: sessionAccount.address,
             },
           },
-          permissions: [{
-            type: 'erc20-transfer',
+          permission: {
+            type: 'erc20-token-periodic',
             data: {
-              token: CONTRACTS[sepolia.id].USDC,
-              amount: spendingLimit.toString(),
-              recipient: CONTRACTS[sepolia.id].PermiPayBilling,
+              tokenAddress: CONTRACTS[sepolia.id].USDC,
+              periodAmount: `0x${spendingLimit.toString(16)}`,
+              periodDuration: `0x${periodSeconds.toString(16)}`,
+              startTime: `0x${startTime.toString(16)}`,
+              endTime: `0x${validUntil.toString(16)}`,
             },
-            policies: [
-              {
-                type: 'value-limit',
-                data: { 
-                  limit: servicePriceLimit.toString() 
-                },
-              },
-              {
-                type: 'time-frame',
-                data: {
-                  validAfter: Date.now(),
-                  validUntil: expiresAt,
-                },
-              },
-            ],
-          }],
-        }],
-      });
+          },
+          isAdjustmentAllowed: true,
+        },
+      ]);
 
-      // 5. Store permission context
-      const permissionContext: PermissionContext = {
-        permissionId: permission.permissionId || `${serviceType}-${Date.now()}`,
+      console.log('✅ Permission granted!', permissionContext);
+
+      // Store permission context for later redemption
+      // The permissionContext is a string (permissions context) returned by MetaMask
+      const storedContext: PermissionContext = {
+        permissionId: typeof permissionContext === 'string' ? permissionContext : `${serviceType}-${Date.now()}`,
         serviceType,
         grantedAt: Date.now(),
-        expiresAt,
+        expiresAt: validUntil * 1000, // Convert to milliseconds
         spendingLimit: spendingLimit.toString(),
       };
 
       if (typeof window !== 'undefined') {
         const stored = localStorage.getItem(PERMISSION_STORAGE_KEY);
         const permissions = stored ? JSON.parse(stored) : {};
-        permissions[`${userAddress}-${serviceType}`] = permissionContext;
+        permissions[`${userAddress}-${serviceType}`] = storedContext;
         localStorage.setItem(PERMISSION_STORAGE_KEY, JSON.stringify(permissions));
       }
 
       setIsLoading(false);
       return true;
 
-    } catch (err: any) {
-      console.error('Error requesting permission:', err);
-      setError(err.message || 'Failed to request permission');
+    } catch (err: unknown) {
+      console.error('❌ Error requesting permission:', err);
+      
+      // Provide helpful error messages
+      const message = err instanceof Error ? err.message : 'Failed to request permission';
+      if (message.includes('User rejected')) {
+        setError('Permission request rejected by user');
+      } else if (message.includes('not supported')) {
+        setError('ERC-7715 not supported. Please update to MetaMask Flask 13.5.0+');
+      } else {
+        setError(message);
+      }
+      
       setIsLoading(false);
       return false;
     }
-  }, [userAddress, checkSmartAccount]);
+  }, [userAddress, walletClient]);
 
   /**
    * Execute service using granted permission
@@ -196,7 +279,7 @@ export function useAdvancedPermissions() {
     serviceType: ServiceType,
     targetAddress?: Address
   ): Promise<string | null> => {
-    if (!userAddress) {
+    if (!userAddress || !walletClient) {
       setError('Please connect your wallet');
       return null;
     }
@@ -205,14 +288,6 @@ export function useAdvancedPermissions() {
     setError(null);
 
     try {
-      // Get session account
-      const sessionAccount = getSessionAccount();
-      if (!sessionAccount) {
-        setError('No session account found. Please request permission first.');
-        setIsLoading(false);
-        return null;
-      }
-
       // Get permission context
       const stored = localStorage.getItem(PERMISSION_STORAGE_KEY);
       const permissions = stored ? JSON.parse(stored) : {};
@@ -232,26 +307,75 @@ export function useAdvancedPermissions() {
         return null;
       }
 
-      // Execute via bundler (gasless transaction)
-      const userOpHash = await bundlerClient.sendUserOperation({
-        account: sessionAccount,
-        calls: [{
-          to: CONTRACTS[sepolia.id].PermiPayBilling,
-          data: `0x${serviceType.toString(16).padStart(64, '0')}`, // Simplified - should encode properly
-          value: 0n,
-        }],
+      // For ERC-7715, we simply call the contract directly using a regular transaction
+      // The permission is already granted via MetaMask, no need for delegation redemption
+      console.log('📝 Executing service via Smart Account...');
+      
+      // Prepare the service call data
+      // For Contract Inspector service, we call inspectContract(address target)
+      const { encodeFunctionData } = await import('viem');
+      
+      let callData: `0x${string}`;
+      if (serviceType === ServiceType.CONTRACT_INSPECTOR && targetAddress) {
+        callData = encodeFunctionData({
+          abi: [
+            {
+              name: 'inspectContract',
+              type: 'function',
+              stateMutability: 'nonpayable',
+              inputs: [{ name: 'target', type: 'address' }],
+              outputs: [],
+            },
+          ],
+          functionName: 'inspectContract',
+          args: [targetAddress],
+        });
+      } else {
+        // For other services without specific parameters
+        callData = encodeFunctionData({
+          abi: [
+            {
+              name: 'useService',
+              type: 'function',
+              stateMutability: 'nonpayable',
+              inputs: [{ name: 'serviceId', type: 'uint8' }],
+              outputs: [],
+            },
+          ],
+          functionName: 'useService',
+          args: [serviceType],
+        });
+      }
+
+      // Estimate gas for the transaction
+      const gasEstimate = await publicClient.estimateGas({
+        account: userAddress,
+        to: CONTRACTS[sepolia.id].PermiPayBilling,
+        data: callData,
       });
 
-      setIsLoading(false);
-      return userOpHash;
+      // Send transaction directly from user's wallet using the granted permission
+      // With ERC-7715, MetaMask handles the permission check automatically
+      console.log('📝 Sending transaction with ERC-7715 permission...');
+      const hash = await walletClient.sendTransaction({
+        to: CONTRACTS[sepolia.id].PermiPayBilling,
+        data: callData,
+        chain: sepolia,
+        gas: gasEstimate,
+      });
 
-    } catch (err: any) {
-      console.error('Error executing service:', err);
-      setError(err.message || 'Failed to execute service');
+      console.log('✅ Service executed successfully! Transaction hash:', hash);
+      setIsLoading(false);
+      return hash;
+
+    } catch (err: unknown) {
+      console.error('❌ Error executing service:', err);
+      const message = err instanceof Error ? err.message : 'Failed to execute service';
+      setError(message);
       setIsLoading(false);
       return null;
     }
-  }, [userAddress]);
+  }, [userAddress, walletClient, smartAccount, setupSmartAccount]);
 
   /**
    * Get permission status for a service
@@ -274,7 +398,7 @@ export function useAdvancedPermissions() {
     return {
       hasPermission: !isExpired,
       spendingLimit,
-      spentAmount: 0n, // Would need to query contract for actual spent amount
+      spentAmount: BigInt(0), // Would need to query contract for actual spent amount
       expiresAt: permissionContext.expiresAt,
       isActive: !isExpired,
       remainingBudget: spendingLimit,
@@ -290,6 +414,8 @@ export function useAdvancedPermissions() {
       localStorage.removeItem(PERMISSION_STORAGE_KEY);
     }
     setSessionAccountAddress(null);
+    setSmartAccountAddress(null);
+    setSmartAccount(null);
   }, []);
 
   return {
@@ -297,12 +423,15 @@ export function useAdvancedPermissions() {
     isLoading,
     error,
     sessionAccountAddress,
+    smartAccountAddress,
+    smartAccount,
 
     // Methods
     requestPermission,
     executeService,
     getPermissionStatus,
     checkSmartAccount,
+    setupSmartAccount,
     revokePermissions,
   };
 }

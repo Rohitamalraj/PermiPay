@@ -62,7 +62,10 @@ export default function ContractInspectorPage() {
 
     try {
       // Execute service using Advanced Permissions (charges $0.30 automatically)
-      const userOpHash = await executeService(ServiceType.CONTRACT_INSPECTOR);
+      const userOpHash = await executeService(
+        ServiceType.CONTRACT_INSPECTOR,
+        contractAddress as Address // Pass the contract address to inspect
+      );
       
       if (!userOpHash) {
         throw new Error("Failed to execute service payment");
@@ -155,25 +158,26 @@ export default function ContractInspectorPage() {
             )}
           </div>
 
-          {/* Permission Setup */}
-          {!hasPermission && showPermissionCard && (
+          {/* Permission Setup - Show by default if no permission */}
+          {!hasPermission && (
             <div className="mb-6">
               <PermissionCard
                 serviceType={ServiceType.CONTRACT_INSPECTOR}
                 serviceName="Contract Inspector"
                 serviceDescription="Deep analysis of smart contracts on Ethereum"
                 serviceIcon={<Code className="h-5 w-5 text-blue-400" />}
-                onPermissionGranted={() => setShowPermissionCard(false)}
+                onPermissionGranted={() => {
+                  setShowPermissionCard(false);
+                  setError("");
+                }}
               />
             </div>
           )}
 
-          {/* Smart Account Check */}
-          {!hasPermission && !showPermissionCard && (
-            <div className="mb-6">
-              <SmartAccountSetup />
-            </div>
-          )}
+          {/* Smart Account Check - Show below Permission Card */}
+          <div className="mb-6">
+            <SmartAccountSetup />
+          </div>
         </div>
 
         {/* Input Section */}
