@@ -273,7 +273,7 @@ export function useAdvancedPermissions() {
 
   /**
    * Execute service using granted permission
-   * No MetaMask popup required!
+   * Flow: Session account calls executeService(user, serviceType) on the billing contract
    */
   const executeService = useCallback(async (
     serviceType: ServiceType,
@@ -307,66 +307,174 @@ export function useAdvancedPermissions() {
         return null;
       }
 
-      // For ERC-7715, we simply call the contract directly using a regular transaction
-      // The permission is already granted via MetaMask, no need for delegation redemption
-      console.log('📝 Executing service via Smart Account...');
-      
-      // Prepare the service call data
-      // For Contract Inspector service, we call inspectContract(address target)
-      const { encodeFunctionData } = await import('viem');
-      
-      let callData: `0x${string}`;
-      if (serviceType === ServiceType.CONTRACT_INSPECTOR && targetAddress) {
-        callData = encodeFunctionData({
-          abi: [
-            {
-              name: 'inspectContract',
-              type: 'function',
-              stateMutability: 'nonpayable',
-              inputs: [{ name: 'target', type: 'address' }],
-              outputs: [],
-            },
-          ],
-          functionName: 'inspectContract',
-          args: [targetAddress],
-        });
-      } else {
-        // For other services without specific parameters
-        callData = encodeFunctionData({
-          abi: [
-            {
-              name: 'useService',
-              type: 'function',
-              stateMutability: 'nonpayable',
-              inputs: [{ name: 'serviceId', type: 'uint8' }],
-              outputs: [],
-            },
-          ],
-          functionName: 'useService',
-          args: [serviceType],
-        });
+      // Get session account
+      const sessionAccount = getSessionAccount();
+      if (!sessionAccount) {
+        setError('Session account not found. Please request permission again.');
+        setIsLoading(false);
+        return null;
       }
 
-      // Estimate gas for the transaction
-      const gasEstimate = await publicClient.estimateGas({
-        account: userAddress,
-        to: CONTRACTS[sepolia.id].PermiPayBilling,
-        data: callData,
+      console.log('📝 Executing service via session account...');
+      
+      // Check if permission is registered on-chain
+      const { encodeFunctionData, decodeAbiParameters } = await import('viem');
+      
+      // FIRST: Calculate the counterfactual Smart Account address for the session
+      console.log('📝 Calculating session Smart Account address...');
+      const { toMetaMaskSmartAccount, Implementation } = await import('@metamask/smart-accounts-kit');
+      
+      const sessionSmartAccount = await toMetaMaskSmartAccount({
+        client: publicClient,
+        implementation: Implementation.Hybrid,
+        deployParams: [sessionAccount.address, [], [], []],
+        deploySalt: '0x',
+        signer: {
+          account: sessionAccount,
+        },
       });
 
-      // Send transaction directly from user's wallet using the granted permission
-      // With ERC-7715, MetaMask handles the permission check automatically
-      console.log('📝 Sending transaction with ERC-7715 permission...');
-      const hash = await walletClient.sendTransaction({
-        to: CONTRACTS[sepolia.id].PermiPayBilling,
-        data: callData,
-        chain: sepolia,
-        gas: gasEstimate,
+      const sessionSmartAccountAddress = sessionSmartAccount.address;
+      console.log('📝 Session Smart Account (counterfactual):', sessionSmartAccountAddress);
+
+      // Read userPermissions to check if permission is registered
+      const permissionData = await publicClient.readContract({
+        address: CONTRACTS[sepolia.id].PermiPayBilling,
+        abi: [
+          {
+            name: 'userPermissions',
+            type: 'function',
+            stateMutability: 'view',
+            inputs: [{ name: 'user', type: 'address' }],
+            outputs: [
+              { name: 'spendingLimit', type: 'uint256' },
+              { name: 'spentAmount', type: 'uint256' },
+              { name: 'expiresAt', type: 'uint256' },
+              { name: 'isActive', type: 'bool' },
+              { name: 'sessionAccount', type: 'address' },
+            ],
+          },
+        ],
+        functionName: 'userPermissions',
+        args: [userAddress],
+      }) as any[];
+
+      const [spendingLimit, spentAmount, expiresAt, isActive, registeredSession] = permissionData;
+
+      // If permission not registered or session account doesn't match Smart Account, register it
+      if (!isActive || registeredSession.toLowerCase() !== sessionSmartAccountAddress.toLowerCase()) {
+        console.log('📝 Registering permission on-chain for Smart Account:', sessionSmartAccountAddress);
+        
+        const grantCallData = encodeFunctionData({
+          abi: [
+            {
+              name: 'grantPermission',
+              type: 'function',
+              stateMutability: 'nonpayable',
+              inputs: [
+                { name: 'sessionAccount', type: 'address' },
+                { name: 'spendingLimit', type: 'uint256' },
+                { name: 'durationSeconds', type: 'uint256' },
+              ],
+              outputs: [],
+            },
+          ],
+          functionName: 'grantPermission',
+          args: [
+            sessionSmartAccountAddress, // Register the Smart Account address!
+            BigInt(permissionContext.spendingLimit),
+            BigInt(Math.floor((permissionContext.expiresAt - Date.now()) / 1000)),
+          ],
+        });
+
+        // User needs to approve USDC spending first
+        console.log('📝 Approving USDC spending...');
+        const approveHash = await walletClient.sendTransaction({
+          to: CONTRACTS[sepolia.id].USDC,
+          data: encodeFunctionData({
+            abi: [
+              {
+                name: 'approve',
+                type: 'function',
+                inputs: [
+                  { name: 'spender', type: 'address' },
+                  { name: 'amount', type: 'uint256' },
+                ],
+                outputs: [{ name: '', type: 'bool' }],
+              },
+            ],
+            functionName: 'approve',
+            args: [CONTRACTS[sepolia.id].PermiPayBilling, BigInt(permissionContext.spendingLimit)],
+          }),
+          chain: sepolia,
+        });
+
+        await publicClient.waitForTransactionReceipt({ hash: approveHash });
+        console.log('✅ USDC approved');
+
+        // Register permission on-chain with Smart Account address
+        const grantHash = await walletClient.sendTransaction({
+          to: CONTRACTS[sepolia.id].PermiPayBilling,
+          data: grantCallData,
+          chain: sepolia,
+        });
+
+        await publicClient.waitForTransactionReceipt({ hash: grantHash });
+        console.log('✅ Permission registered on-chain for Smart Account:', sessionSmartAccountAddress);
+      } else {
+        console.log('✅ Permission already registered for Smart Account:', registeredSession);
+      }
+
+      // Now execute service via session account with Pimlico paymaster for gas sponsorship
+      console.log('📝 Executing service via session Smart Account (gas sponsored by Pimlico)...');
+      
+      const executeCallData = encodeFunctionData({
+        abi: [
+          {
+            name: 'executeService',
+            type: 'function',
+            stateMutability: 'nonpayable',
+            inputs: [
+              { name: 'user', type: 'address' },
+              { name: 'serviceType', type: 'uint8' },
+            ],
+            outputs: [{ name: '', type: 'bool' }],
+          },
+        ],
+        functionName: 'executeService',
+        args: [userAddress, serviceType],
       });
 
-      console.log('✅ Service executed successfully! Transaction hash:', hash);
+      // Use the Smart Account we created earlier
+      console.log('📝 Using session Smart Account:', sessionSmartAccountAddress);
+
+      // Create bundler with Pimlico paymaster
+      const bundlerClient = await createERC7710BundlerClient();
+
+      // Send UserOperation with Pimlico paymaster sponsoring gas
+      console.log('📝 Sending UserOperation with Pimlico paymaster...');
+      const userOpHash = await bundlerClient.sendUserOperation({
+        account: sessionSmartAccount,
+        calls: [
+          {
+            to: CONTRACTS[sepolia.id].PermiPayBilling,
+            data: executeCallData,
+            value: 0n,
+          },
+        ],
+      });
+
+      console.log('✅ UserOperation submitted:', userOpHash);
+
+      // Wait for the UserOperation to be included
+      console.log('⏳ Waiting for transaction to be mined...');
+      const receipt = await bundlerClient.waitForUserOperationReceipt({
+        hash: userOpHash,
+      });
+
+      console.log('✅ Service executed successfully! Transaction hash:', receipt.receipt.transactionHash);
       setIsLoading(false);
-      return hash;
+      return receipt.receipt.transactionHash;
 
     } catch (err: unknown) {
       console.error('❌ Error executing service:', err);
@@ -375,7 +483,7 @@ export function useAdvancedPermissions() {
       setIsLoading(false);
       return null;
     }
-  }, [userAddress, walletClient, smartAccount, setupSmartAccount]);
+  }, [userAddress, walletClient]);
 
   /**
    * Get permission status for a service

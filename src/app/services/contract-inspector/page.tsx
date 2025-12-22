@@ -33,6 +33,7 @@ export default function ContractInspectorPage() {
   const [contractData, setContractData] = useState<ContractData | null>(null);
   const [error, setError] = useState("");
   const [showPermissionCard, setShowPermissionCard] = useState(false);
+  const [transactionHash, setTransactionHash] = useState<string | null>(null);
 
   const { 
     executeService, 
@@ -59,17 +60,21 @@ export default function ContractInspectorPage() {
     setLoading(true);
     setError("");
     setContractData(null);
+    setTransactionHash(null);
 
     try {
       // Execute service using Advanced Permissions (charges $0.30 automatically)
-      const userOpHash = await executeService(
+      const txHash = await executeService(
         ServiceType.CONTRACT_INSPECTOR,
         contractAddress as Address // Pass the contract address to inspect
       );
       
-      if (!userOpHash) {
+      if (!txHash) {
         throw new Error("Failed to execute service payment");
       }
+
+      // Store transaction hash
+      setTransactionHash(txHash);
 
       // Fetch contract data from Etherscan API
       const response = await fetch(
@@ -84,7 +89,15 @@ export default function ContractInspectorPage() {
       setContractData(data);
 
     } catch (err: any) {
-      setError(err.message || "Failed to analyze contract");
+      const errorMessage = err.message || "Failed to analyze contract";
+      
+      // Check for insufficient balance error
+      if (errorMessage.includes("transfer amount exceeds balance") || 
+          errorMessage.includes("insufficient")) {
+        setError("Insufficient USDC balance. You need at least $0.30 USDC to use this service. Get test USDC from a Sepolia faucet.");
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -209,9 +222,60 @@ export default function ContractInspectorPage() {
           </div>
 
           {error && (
-            <div className="mt-4 flex items-center gap-2 text-red-400">
-              <AlertCircle className="h-5 w-5" />
-              <p>{error}</p>
+            <div className="mt-4 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-red-400 mb-2">{error}</p>
+                  {(error.includes("Insufficient") || error.includes("balance")) && (
+                    <div className="space-y-2">
+                      <p className="text-sm text-gray-400">
+                        Get free test USDC from these faucets:
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <a
+                          href="https://faucet.circle.com/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded-lg text-sm text-blue-400 transition-colors"
+                        >
+                          Circle Faucet
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                        <a
+                          href="https://www.alchemy.com/faucets/ethereum-sepolia"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded-lg text-sm text-blue-400 transition-colors"
+                        >
+                          Alchemy Faucet
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {transactionHash && (
+            <div className="mt-4 flex items-center justify-between bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-green-400">
+                <CheckCircle2 className="h-5 w-5" />
+                <p className="font-semibold">Payment Successful</p>
+              </div>
+              <a
+                href={`https://sepolia.etherscan.io/tx/${transactionHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors"
+              >
+                <span className="text-sm font-mono">
+                  {transactionHash.slice(0, 6)}...{transactionHash.slice(-4)}
+                </span>
+                <ExternalLink className="h-4 w-4" />
+              </a>
             </div>
           )}
 

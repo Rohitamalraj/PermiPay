@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY || "";
-const ETHERSCAN_API_URL = "https://api-sepolia.etherscan.io/api";
+// Etherscan V2 API (Multichain API) - supports multiple chains with chainid parameter
+const ETHERSCAN_API_URL = "https://api.etherscan.io/v2/api";
+const SEPOLIA_CHAIN_ID = "11155111"; // Sepolia testnet chain ID
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -15,22 +17,32 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Fetch contract source code and ABI from Etherscan
+    console.log("Fetching contract data for:", address);
+    
+    // Fetch contract source code and ABI from Etherscan V2 API
     const response = await fetch(
-      `${ETHERSCAN_API_URL}?module=contract&action=getsourcecode&address=${address}&apikey=${ETHERSCAN_API_KEY}`
+      `${ETHERSCAN_API_URL}?chainid=${SEPOLIA_CHAIN_ID}&module=contract&action=getsourcecode&address=${address}&apikey=${ETHERSCAN_API_KEY}`
     );
 
     if (!response.ok) {
+      console.error("Etherscan API returned error:", response.status);
       throw new Error("Failed to fetch from Etherscan");
     }
 
     const data = await response.json();
+    console.log("Etherscan response:", JSON.stringify(data).slice(0, 200));
 
     if (data.status === "0") {
-      throw new Error(data.result || "Contract not found");
+      console.error("Etherscan error:", data.result);
+      throw new Error(data.message || data.result || "Contract not found");
     }
 
     const contractInfo = data.result[0];
+    
+    if (!contractInfo) {
+      throw new Error("No contract data returned from Etherscan");
+    }
+    
     const isVerified = contractInfo.SourceCode !== "";
 
     // Parse ABI if available
@@ -56,13 +68,15 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Fetch bytecode
+    // Fetch bytecode using V2 API
     const bytecodeResponse = await fetch(
-      `${ETHERSCAN_API_URL}?module=proxy&action=eth_getCode&address=${address}&tag=latest&apikey=${ETHERSCAN_API_KEY}`
+      `${ETHERSCAN_API_URL}?chainid=${SEPOLIA_CHAIN_ID}&module=proxy&action=eth_getCode&address=${address}&tag=latest&apikey=${ETHERSCAN_API_KEY}`
     );
 
     const bytecodeData = await bytecodeResponse.json();
     const bytecode = bytecodeData.result;
+
+    console.log("Successfully processed contract data");
 
     return NextResponse.json({
       address,
