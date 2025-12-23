@@ -2,7 +2,6 @@ import {
   PermiPayBilling,
   Permission,
   ServiceExecution,
-  Service,
   GlobalStats,
   DailyStats,
 } from "generated";
@@ -41,7 +40,7 @@ function getOrCreateDailyStats(timestamp: bigint, context: any): DailyStats {
       uniqueUsers: 0,
       contractInspectorCount: 0,
       walletReputationCount: 0,
-      addressInsightsCount: 0,
+      walletAuditCount: 0,
     };
   }
   return stats;
@@ -99,7 +98,7 @@ PermiPayBilling.ServiceExecuted.handler(async ({ event, context }) => {
     id: executionId,
     permission: user.toLowerCase(),
     user: user.toLowerCase(),
-    serviceType: ["CONTRACT_INSPECTOR", "WALLET_REPUTATION", "ADDRESS_INSIGHTS"][serviceType],
+    serviceType: ["CONTRACT_INSPECTOR", "WALLET_REPUTATION", "WALLET_AUDIT"][serviceType],
     cost,
     remainingBudget,
     timestamp,
@@ -135,18 +134,10 @@ PermiPayBilling.ServiceExecuted.handler(async ({ event, context }) => {
   } else if (serviceType === 1) {
     dailyStats.walletReputationCount += 1;
   } else if (serviceType === 2) {
-    dailyStats.addressInsightsCount += 1;
+    dailyStats.walletAuditCount += 1;
   }
   
   context.DailyStats.set(dailyStats);
-
-  // Update service total executions
-  const serviceId = serviceType.toString();
-  const service = context.Service.get(serviceId);
-  if (service) {
-    service.totalExecutions += 1n;
-    context.Service.set(service);
-  }
 });
 
 /**
@@ -174,50 +165,4 @@ PermiPayBilling.PermissionRevoked.handler(async ({ event, context }) => {
   const dailyStats = getOrCreateDailyStats(timestamp, context);
   dailyStats.permissionsRevoked += 1;
   context.DailyStats.set(dailyStats);
-});
-
-/**
- * Handler for ServiceAdded event (from ServiceRegistry)
- */
-PermiPayBilling.ServiceAdded.handler(async ({ event, context }) => {
-  const { serviceId, name, price } = event.params;
-
-  const service: Service = {
-    id: serviceId.toString(),
-    name,
-    description: "",
-    price,
-    isActive: true,
-    totalExecutions: 0n,
-  };
-
-  context.Service.set(service);
-});
-
-/**
- * Handler for ServiceUpdated event (from ServiceRegistry)
- */
-PermiPayBilling.ServiceUpdated.handler(async ({ event, context }) => {
-  const { serviceId, newPrice } = event.params;
-  const txHash = event.transaction.hash;
-
-  const service = context.Service.get(serviceId.toString());
-  if (service) {
-    // Create price update history record
-    const priceUpdateId = `${txHash}-${event.logIndex}`;
-    const priceUpdate = {
-      id: priceUpdateId,
-      service: serviceId.toString(),
-      oldPrice: service.price,
-      newPrice,
-      timestamp: event.block.timestamp,
-      transactionHash: txHash,
-    };
-    
-    context.PriceUpdate.set(priceUpdate);
-
-    // Update service price
-    service.price = newPrice;
-    context.Service.set(service);
-  }
 });

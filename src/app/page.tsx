@@ -25,6 +25,12 @@ export default function Home() {
             <Link href="#features" className="text-sm text-gray-300 hover:text-white transition-colors">
               Features
             </Link>
+            <Link href="/analytics" className="text-sm text-gray-300 hover:text-white transition-colors">
+              Analytics
+            </Link>
+            <Link href="/profile" className="text-sm text-gray-300 hover:text-white transition-colors">
+              Profile
+            </Link>
             <Link href="#how-it-works" className="text-sm text-gray-300 hover:text-white transition-colors">
               How It Works
             </Link>

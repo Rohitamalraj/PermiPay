@@ -34,7 +34,7 @@ type ServiceExecution @entity {
 enum ServiceType {
   CONTRACT_INSPECTOR
   WALLET_REPUTATION
-  ADDRESS_INSIGHTS
+  WALLET_AUDIT
 }
 
 # Service metadata from registry
@@ -80,5 +80,5 @@ type DailyStats @entity {
   uniqueUsers: Int!                # unique users this day
   contractInspectorCount: Int!     # Contract Inspector executions
   walletReputationCount: Int!      # Wallet Reputation executions
-  addressInsightsCount: Int!       # Address Insights executions
+  walletAuditCount: Int!           # Wallet Audit executions
 }
