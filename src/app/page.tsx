@@ -93,18 +93,18 @@ export default function Home() {
                   <div className="space-y-3">
                     <div className="flex items-center gap-2 text-sm">
                       <div className="w-2 h-2 rounded-full bg-[#0052FF]"></div>
-                      <span className="text-gray-400">Address Insights</span>
-                      <span className="ml-auto text-white">$0.50</span>
+                      <span className="text-gray-400">Wallet Security Audit</span>
+                      <span className="ml-auto text-white">$0.15</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <div className="w-2 h-2 rounded-full bg-[#3387FF]"></div>
                       <span className="text-gray-400">Wallet Reputation</span>
-                      <span className="ml-auto text-white">$0.40</span>
+                      <span className="ml-auto text-white">$0.10</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <div className="w-2 h-2 rounded-full bg-[#0052FF]"></div>
                       <span className="text-gray-400">Contract Inspector</span>
-                      <span className="ml-auto text-white">$0.30</span>
+                      <span className="ml-auto text-white">$0.05</span>
                     </div>
                   </div>
                 </div>
@@ -113,17 +113,17 @@ export default function Home() {
                   <h3 className="text-xl font-semibold mb-4">This Month</h3>
                   <div className="grid grid-cols-2 gap-4 text-center">
                     <div>
-                      <p className="text-3xl font-bold text-[#0052FF]">12</p>
+                      <p className="text-3xl font-bold text-[#0052FF]">18</p>
                       <p className="text-xs text-gray-400">Services Used</p>
                     </div>
                     <div>
-                      <p className="text-3xl font-bold text-[#3387FF]">$4.80</p>
+                      <p className="text-3xl font-bold text-[#3387FF]">$1.80</p>
                       <p className="text-xs text-gray-400">Total Spent</p>
                     </div>
                   </div>
                   <div className="mt-4 pt-4 border-t border-white/10">
                     <p className="text-sm text-gray-400">Avg per service</p>
-                    <p className="text-2xl font-bold text-white">$0.40</p>
+                    <p className="text-2xl font-bold text-white">$0.10</p>
                   </div>
                 </div>
               </div>
@@ -146,7 +146,7 @@ export default function Home() {
               const serviceLinks: Record<string, string> = {
                 CONTRACT_INSPECTOR: "/services/contract-inspector",
                 WALLET_REPUTATION: "/services/wallet-reputation",
-                ADDRESS_INSIGHTS: "/services/address-insights",
+                WALLET_AUDIT: "/services/wallet-audit",
               };
               
               return (

@@ -19,7 +19,7 @@ const PRIVATE_KEY = `0x${process.env.DEPLOYER_PRIVATE_KEY?.replace('0x', '')}` a
 enum ServiceType {
   CONTRACT_INSPECTOR = 0,
   WALLET_REPUTATION = 1,
-  ADDRESS_INSIGHTS = 2,
+  WALLET_AUDIT = 2, // Using ADDRESS_INSIGHTS slot
 }
 
 const CONTRACT_ABI = [
@@ -87,6 +87,14 @@ async function main() {
   });
   console.log(`   Wallet Reputation: $${Number(walletReputationPrice) / 1_000_000} USDC`);
 
+  const walletAuditPrice = await publicClient.readContract({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: 'servicePrices',
+    args: [ServiceType.WALLET_AUDIT],
+  });
+  console.log(`   Wallet Audit: $${Number(walletAuditPrice) / 1_000_000} USDC`);
+
   // Check treasury address
   const treasury = await publicClient.readContract({
     address: CONTRACT_ADDRESS,
@@ -96,15 +104,15 @@ async function main() {
   console.log('\n💰 Treasury Address:', treasury);
   console.log('   (This is where service fees are sent)');
 
-  // Update Wallet Reputation price to $0.10
-  console.log('\n🔄 Updating Wallet Reputation price to $0.10...');
-  const newPrice = parseUnits('0.10', 6); // $0.10 = 100000 (0.10 * 1e6)
+  // Update Wallet Audit price to $0.15
+  console.log('\n🔄 Updating Wallet Audit price to $0.15...');
+  const newPrice = parseUnits('0.15', 6); // $0.15 = 150000 (0.15 * 1e6)
 
   const hash = await walletClient.writeContract({
     address: CONTRACT_ADDRESS,
     abi: CONTRACT_ABI,
     functionName: 'updateServicePrice',
-    args: [ServiceType.WALLET_REPUTATION, newPrice],
+    args: [ServiceType.WALLET_AUDIT, newPrice],
     maxFeePerGas: parseUnits('50', 9), // 50 gwei
     maxPriorityFeePerGas: parseUnits('2', 9), // 2 gwei priority
   });
@@ -125,11 +133,11 @@ async function main() {
       address: CONTRACT_ADDRESS,
       abi: CONTRACT_ABI,
       functionName: 'servicePrices',
-      args: [ServiceType.WALLET_REPUTATION],
+      args: [ServiceType.WALLET_AUDIT],
     });
 
     console.log('\n✅ Price Updated Successfully!');
-    console.log(`   New Wallet Reputation Price: $${Number(updatedPrice) / 1_000_000} USDC`);
+    console.log(`   New Wallet Audit Price: $${Number(updatedPrice) / 1_000_000} USDC`);
   } catch (error) {
     console.log('\n⚠️  Transaction submitted but confirmation timed out.');
     console.log('   Please check Etherscan link above to verify the transaction status.');

@@ -27,14 +27,14 @@ import { sepolia } from 'viem/chains';
 export enum ServiceType {
   CONTRACT_INSPECTOR = 0,
   WALLET_REPUTATION = 1,
-  ADDRESS_INSIGHTS = 2,
+  WALLET_AUDIT = 2, // Using ADDRESS_INSIGHTS slot in deployed contract
 }
 
 // Service pricing (in USDC with 6 decimals)
 export const SERVICE_PRICES = {
-  [ServiceType.CONTRACT_INSPECTOR]: parseUnits('0.30', 6), // 300000
-  [ServiceType.WALLET_REPUTATION]: parseUnits('0.40', 6),  // 400000
-  [ServiceType.ADDRESS_INSIGHTS]: parseUnits('0.50', 6),   // 500000
+  [ServiceType.CONTRACT_INSPECTOR]: parseUnits('0.05', 6), // 50000
+  [ServiceType.WALLET_REPUTATION]: parseUnits('0.10', 6),  // 100000
+  [ServiceType.WALLET_AUDIT]: parseUnits('0.15', 6),       // 150000
 } as const;
 
 // Permission status for a service
