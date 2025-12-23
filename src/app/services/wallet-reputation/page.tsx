@@ -4,7 +4,10 @@ import { useState } from "react";
 import { useAccount } from "wagmi";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck, AlertCircle, TrendingUp, Activity, Clock, Search } from "lucide-react";
+import { ShieldCheck, AlertCircle, TrendingUp, Activity, Clock, Search, Zap, CheckCircle2, ExternalLink } from "lucide-react";
+import { PermissionCard } from "@/components/permissions/PermissionCard";
+import { SmartAccountSetup } from "@/components/permissions/SmartAccountSetup";
+import { useAdvancedPermissions, ServiceType } from "@/hooks/useAdvancedPermissions";
 
 interface ReputationData {
   address: string;
@@ -34,6 +37,19 @@ export default function WalletReputationPage() {
   const [loading, setLoading] = useState(false);
   const [reputationData, setReputationData] = useState<ReputationData | null>(null);
   const [error, setError] = useState("");
+  const [showPermissionCard, setShowPermissionCard] = useState(false);
+  const [transactionHash, setTransactionHash] = useState<string | null>(null);
+  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+
+  const { 
+    executeService, 
+    getPermissionStatus,
+    isLoading: permissionLoading 
+  } = useAdvancedPermissions();
+
+  const permissionStatus = getPermissionStatus(ServiceType.WALLET_REPUTATION);
+  const hasPermission = permissionStatus?.hasPermission && permissionStatus.isActive;
 
   const analyzeWallet = async () => {
     if (!walletAddress) {
@@ -41,13 +57,35 @@ export default function WalletReputationPage() {
       return;
     }
 
+    // Check if user has granted permission
+    if (!hasPermission) {
+      setShowPermissionCard(true);
+      setError("Please grant permission first to use this service");
+      return;
+    }
+
     setLoading(true);
     setError("");
     setReputationData(null);
+    setTransactionHash(null);
+    setAiAnalysis(null);
+    setAiLoading(false);
 
     try {
-      // TODO: Implement permission check and auto-billing ($0.40)
+      // Execute service using Advanced Permissions (charges $0.10 automatically)
+      const txHash = await executeService(
+        ServiceType.WALLET_REPUTATION,
+        walletAddress as `0x${string}`
+      );
       
+      if (!txHash) {
+        throw new Error("Failed to execute service payment");
+      }
+
+      // Store transaction hash
+      setTransactionHash(txHash);
+
+      // Fetch reputation data from Etherscan API
       const response = await fetch(
         `/api/services/wallet-reputation?address=${walletAddress}`
       );
@@ -59,8 +97,47 @@ export default function WalletReputationPage() {
       const data = await response.json();
       setReputationData(data);
 
+      // Fetch AI analysis (don't let this block the main flow)
+      setAiLoading(true);
+      try {
+        console.log("🤖 Fetching AI analysis for wallet...");
+        const aiResponse = await fetch("/api/ai/analyze-wallet", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            address: walletAddress,
+            reputationData: data,
+          }),
+        });
+
+        console.log("🤖 AI Response status:", aiResponse.status);
+
+        if (aiResponse.ok) {
+          const aiData = await aiResponse.json();
+          console.log("🤖 AI Analysis received:", aiData);
+          setAiAnalysis(aiData.analysis);
+        } else {
+          const errorText = await aiResponse.text();
+          console.error("🤖 AI analysis error:", errorText);
+        }
+      } catch (aiErr) {
+        console.error("🤖 AI analysis failed:", aiErr);
+      } finally {
+        setAiLoading(false);
+      }
+
     } catch (err: any) {
-      setError(err.message || "Failed to analyze wallet");
+      const errorMessage = err.message || "Failed to analyze wallet";
+      
+      // Check for insufficient balance error
+      if (errorMessage.includes("transfer amount exceeds balance") || 
+          errorMessage.includes("insufficient")) {
+        setError("Insufficient USDC balance. You need at least $0.10 USDC to use this service. Get test USDC from a Sepolia faucet.");
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -111,18 +188,64 @@ export default function WalletReputationPage() {
             </div>
           </div>
 
-          <Card className="bg-gradient-to-br from-[#0052FF]/10 to-[#3387FF]/10 border-[#0052FF]/30 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-400 mb-1">Service Cost</p>
-                <p className="text-3xl font-bold text-[#0052FF]">$0.40</p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <Card className="bg-gradient-to-br from-[#0052FF]/10 to-[#3387FF]/10 border-[#0052FF]/30 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-400 mb-1">Service Cost</p>
+                  <p className="text-3xl font-bold text-[#0052FF]">$0.10</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-gray-400 mb-1">Per Analysis</p>
+                  <div className="flex items-center gap-2 text-green-400">
+                    <Zap className="h-4 w-4" />
+                    <p className="text-lg">Auto-charged</p>
+                  </div>
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-sm text-gray-400 mb-1">Per Analysis</p>
-                <p className="text-lg text-white">Charged automatically from permission</p>
-              </div>
+            </Card>
+
+            {hasPermission && (
+              <Card className="bg-gradient-to-br from-green-500/10 to-blue-500/10 border-green-500/30 p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-400 mb-1">Permission Status</p>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-green-400" />
+                      <p className="text-xl font-bold text-green-400">Active</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-400 mb-1">Budget Remaining</p>
+                    <p className="text-lg font-semibold">
+                      ${(Number(permissionStatus?.remainingBudget || 0n) / 1_000_000).toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            )}
+          </div>
+
+          {/* Permission Setup */}
+          {!hasPermission && (
+            <div className="mb-6">
+              <PermissionCard
+                serviceType={ServiceType.WALLET_REPUTATION}
+                serviceName="Wallet Reputation"
+                serviceDescription="Advanced on-chain reputation scoring and risk assessment"
+                serviceIcon={<ShieldCheck className="h-5 w-5 text-blue-400" />}
+                onPermissionGranted={() => {
+                  setShowPermissionCard(false);
+                  setError("");
+                }}
+              />
             </div>
-          </Card>
+          )}
+
+          {/* Smart Account Check */}
+          <div className="mb-6">
+            <SmartAccountSetup />
+          </div>
         </div>
 
         {/* Input Section */}
@@ -154,9 +277,51 @@ export default function WalletReputationPage() {
           </div>
 
           {error && (
-            <div className="mt-4 flex items-center gap-2 text-red-400">
-              <AlertCircle className="h-5 w-5" />
-              <p>{error}</p>
+            <div className="mt-4 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-red-400 mb-2">{error}</p>
+                  {(error.includes("Insufficient") || error.includes("balance")) && (
+                    <div className="space-y-2">
+                      <p className="text-sm text-gray-400">
+                        Get free test USDC from these faucets:
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <a
+                          href="https://faucet.circle.com/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded-lg text-sm text-blue-400 transition-colors"
+                        >
+                          Circle Faucet
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {transactionHash && (
+            <div className="mt-4 flex items-center justify-between bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-green-400">
+                <CheckCircle2 className="h-5 w-5" />
+                <p className="font-semibold">Payment Successful</p>
+              </div>
+              <a
+                href={`https://sepolia.etherscan.io/tx/${transactionHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors"
+              >
+                <span className="text-sm font-mono">
+                  {transactionHash.slice(0, 6)}...{transactionHash.slice(-4)}
+                </span>
+                <ExternalLink className="h-4 w-4" />
+              </a>
             </div>
           )}
 
@@ -173,6 +338,67 @@ export default function WalletReputationPage() {
         {/* Results Section */}
         {reputationData && (
           <div className="space-y-6">
+            {/* AI Analysis Section */}
+            {(aiAnalysis || aiLoading) && (
+              <Card className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-purple-500/30 p-8">
+                <div className="flex items-start gap-4 mb-6">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
+                    <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-2xl font-bold mb-2 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                      AI-Powered Reputation Analysis
+                    </h3>
+                    <p className="text-sm text-gray-400">Powered by Groq & Llama 3.3 70B</p>
+                  </div>
+                </div>
+
+                {aiLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+                    <p className="ml-4 text-gray-400">Analyzing wallet reputation with AI...</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {aiAnalysis?.split('\n\n').map((paragraph, idx) => {
+                      // Check if it's a heading (starts with **)
+                      if (paragraph.trim().startsWith('**')) {
+                        const heading = paragraph.replace(/\*\*/g, '').trim();
+                        return (
+                          <h4 key={idx} className="text-lg font-bold text-purple-300 mt-6 first:mt-0">
+                            {heading}
+                          </h4>
+                        );
+                      }
+                      
+                      // Check if it's a list item (starts with * or -)
+                      if (paragraph.trim().startsWith('*') || paragraph.trim().startsWith('-')) {
+                        const items = paragraph.split('\n').filter(line => line.trim());
+                        return (
+                          <ul key={idx} className="list-disc list-inside space-y-2 text-gray-300 ml-4">
+                            {items.map((item, i) => (
+                              <li key={i} className="leading-relaxed">
+                                {item.replace(/^[\*\-]\s*/, '').replace(/\*\*/g, '')}
+                              </li>
+                            ))}
+                          </ul>
+                        );
+                      }
+
+                      // Regular paragraph
+                      return (
+                        <p key={idx} className="text-gray-300 leading-relaxed">
+                          {paragraph.replace(/\*\*/g, '')}
+                        </p>
+                      );
+                    })}
+                  </div>
+                )}
+              </Card>
+            )}
+
             {/* Overall Score */}
             <Card className="bg-white/5 border-white/10 p-8">
               <div className="flex items-start justify-between mb-6">

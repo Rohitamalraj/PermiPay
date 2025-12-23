@@ -34,6 +34,8 @@ export default function ContractInspectorPage() {
   const [error, setError] = useState("");
   const [showPermissionCard, setShowPermissionCard] = useState(false);
   const [transactionHash, setTransactionHash] = useState<string | null>(null);
+  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   const { 
     executeService, 
@@ -61,6 +63,8 @@ export default function ContractInspectorPage() {
     setError("");
     setContractData(null);
     setTransactionHash(null);
+    setAiAnalysis(null);
+    setAiLoading(false);
 
     try {
       // Execute service using Advanced Permissions (charges $0.30 automatically)
@@ -88,13 +92,43 @@ export default function ContractInspectorPage() {
       const data = await response.json();
       setContractData(data);
 
+      // Fetch AI analysis
+      if (data.contractName || data.functions) {
+        setAiLoading(true);
+        try {
+          const aiResponse = await fetch("/api/ai/analyze-contract", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              contractName: data.contractName,
+              functions: data.functions,
+              abi: data.abi,
+              isVerified: data.isVerified,
+              compilerVersion: data.compilerVersion,
+            }),
+          });
+
+          if (aiResponse.ok) {
+            const aiData = await aiResponse.json();
+            setAiAnalysis(aiData.analysis);
+          }
+        } catch (aiErr) {
+          console.error("AI analysis failed:", aiErr);
+          // Don't show error to user, AI is optional
+        } finally {
+          setAiLoading(false);
+        }
+      }
+
     } catch (err: any) {
       const errorMessage = err.message || "Failed to analyze contract";
       
       // Check for insufficient balance error
       if (errorMessage.includes("transfer amount exceeds balance") || 
           errorMessage.includes("insufficient")) {
-        setError("Insufficient USDC balance. You need at least $0.30 USDC to use this service. Get test USDC from a Sepolia faucet.");
+        setError("Insufficient USDC balance. You need at least $0.05 USDC to use this service. Get test USDC from a Sepolia faucet.");
       } else {
         setError(errorMessage);
       }
@@ -138,7 +172,7 @@ export default function ContractInspectorPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-400 mb-1">Service Cost</p>
-                  <p className="text-3xl font-bold text-[#0052FF]">$0.30</p>
+                  <p className="text-3xl font-bold text-[#0052FF]">$0.05</p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-gray-400 mb-1">Per Analysis</p>
@@ -298,6 +332,67 @@ export default function ContractInspectorPage() {
         {/* Results Section */}
         {contractData && (
           <div className="space-y-6">
+            {/* AI Analysis Section */}
+            {(aiAnalysis || aiLoading) && (
+              <Card className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-purple-500/30 p-8">
+                <div className="flex items-start gap-4 mb-6">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
+                    <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-2xl font-bold mb-2 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                      AI-Powered Analysis
+                    </h3>
+                    <p className="text-sm text-gray-400">Powered by Groq & Llama 3.3 70B</p>
+                  </div>
+                </div>
+
+                {aiLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+                    <p className="ml-4 text-gray-400">Analyzing contract with AI...</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {aiAnalysis?.split('\n\n').map((paragraph, idx) => {
+                      // Check if it's a heading (starts with **)
+                      if (paragraph.trim().startsWith('**')) {
+                        const heading = paragraph.replace(/\*\*/g, '').trim();
+                        return (
+                          <h4 key={idx} className="text-lg font-bold text-purple-300 mt-6 first:mt-0">
+                            {heading}
+                          </h4>
+                        );
+                      }
+                      
+                      // Check if it's a list item (starts with * or -)
+                      if (paragraph.trim().startsWith('*') || paragraph.trim().startsWith('-')) {
+                        const items = paragraph.split('\n').filter(line => line.trim());
+                        return (
+                          <ul key={idx} className="list-disc list-inside space-y-2 text-gray-300 ml-4">
+                            {items.map((item, i) => (
+                              <li key={i} className="leading-relaxed">
+                                {item.replace(/^[\*\-]\s*/, '').replace(/\*\*/g, '')}
+                              </li>
+                            ))}
+                          </ul>
+                        );
+                      }
+
+                      // Regular paragraph
+                      return (
+                        <p key={idx} className="text-gray-300 leading-relaxed">
+                          {paragraph.replace(/\*\*/g, '')}
+                        </p>
+                      );
+                    })}
+                  </div>
+                )}
+              </Card>
+            )}
+
             {/* Verification Status */}
             <Card className="bg-white/5 border-white/10 p-8">
               <div className="flex items-start justify-between mb-6">

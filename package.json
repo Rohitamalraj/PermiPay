@@ -7,7 +7,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "update-price": "tsx scripts/updateServicePrice.ts"
   },
   "dependencies": {
     "@metamask/sdk-react": "^0.30.0",

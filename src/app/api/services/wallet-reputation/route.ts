@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY || "";
-const ETHERSCAN_API_URL = "https://api-sepolia.etherscan.io/api";
+// Etherscan V2 API (Multichain API) - supports multiple chains with chainid parameter
+const ETHERSCAN_API_URL = "https://api.etherscan.io/v2/api";
+const SEPOLIA_CHAIN_ID = "11155111"; // Sepolia testnet chain ID
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -15,22 +17,30 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Fetch transaction list
+    // Fetch transaction list using Etherscan V2 API (Multichain)
     const txResponse = await fetch(
-      `${ETHERSCAN_API_URL}?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=asc&apikey=${ETHERSCAN_API_KEY}`
+      `${ETHERSCAN_API_URL}?chainid=${SEPOLIA_CHAIN_ID}&module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&sort=asc&apikey=${ETHERSCAN_API_KEY}`
     );
 
+    if (!txResponse.ok) {
+      console.error("Etherscan API returned error:", txResponse.status);
+      throw new Error("Failed to fetch from Etherscan");
+    }
+
     const txData = await txResponse.json();
+    
+    console.log("Etherscan API Response:", txData);
 
     if (txData.status === "0" && txData.message !== "No transactions found") {
-      throw new Error("Failed to fetch transaction data");
+      console.error("Etherscan API Error:", txData.message, txData.result);
+      throw new Error(`Etherscan API Error: ${txData.message}`);
     }
 
     const transactions = txData.result || [];
 
-    // Fetch ERC-20 token transfers
+    // Fetch ERC-20 token transfers using Etherscan V2 API (Multichain)
     const tokenTxResponse = await fetch(
-      `${ETHERSCAN_API_URL}?module=account&action=tokentx&address=${address}&startblock=0&endblock=99999999&sort=asc&apikey=${ETHERSCAN_API_KEY}`
+      `${ETHERSCAN_API_URL}?chainid=${SEPOLIA_CHAIN_ID}&module=account&action=tokentx&address=${address}&startblock=0&endblock=99999999&sort=asc&apikey=${ETHERSCAN_API_KEY}`
     );
 
     const tokenTxData = await tokenTxResponse.json();
