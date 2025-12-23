@@ -1,6 +1,7 @@
 name: permipay-analytics
 description: Permission-metered billing indexer for PermiPay Analytics
-version: 2
+version: 2.21.3
+ecosystem: evm
 networks:
   - id: 11155111 # Ethereum Sepolia
     start_block: 7337440 # Block when contract was deployed
