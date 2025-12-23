@@ -82,9 +82,16 @@ export async function GET(request: NextRequest) {
     }
 
     const transactions = tokenTxData.result || [];
+    console.log(`Found ${transactions.length} token transactions`);
     
     // Step 2: Extract unique token and spender addresses from transactions
     const tokenSpenderPairs = new Map<string, Set<string>>();
+    
+    // Common spender addresses to always check
+    const commonSpenders = [
+      '0x6B3c3435DfC8dE86018dC311915E8D7af826c3Fa', // PermiPayBilling
+      '0x0000000000000000000000000000000000000001', // Test spender
+    ];
     
     transactions.forEach((tx: any) => {
       const tokenAddr = tx.contractAddress.toLowerCase();
@@ -96,6 +103,13 @@ export async function GET(request: NextRequest) {
         tokenSpenderPairs.get(tokenAddr)!.add(tx.to.toLowerCase());
       }
     });
+    
+    // Add common spenders to all discovered tokens
+    for (const [tokenAddr, spenders] of tokenSpenderPairs) {
+      commonSpenders.forEach(spender => spenders.add(spender.toLowerCase()));
+    }
+    
+    console.log(`Checking ${tokenSpenderPairs.size} tokens with potential spenders`);
 
     // Step 3: For each token-spender pair, check current allowance
     const approvals: TokenApproval[] = [];
@@ -137,8 +151,11 @@ export async function GET(request: NextRequest) {
               args: [address as `0x${string}`, spender as `0x${string}`],
             });
 
+            console.log(`Checking ${symbol} approval for ${spender}: ${allowance.toString()}`);
+
             // Only include if there's an active allowance
             if (allowance > 0n) {
+              console.log(`Found approval: ${symbol} -> ${spender} = ${allowance.toString()}`);
               // Check if spender contract is verified
               const verificationResponse = await fetch(
                 `${ETHERSCAN_API_URL}?chainid=${SEPOLIA_CHAIN_ID}&module=contract&action=getsourcecode&address=${spender}&apikey=${ETHERSCAN_API_KEY}`
