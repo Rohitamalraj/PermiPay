@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { useAccount } from "wagmi";
+import { useAccount, useReadContract } from "wagmi";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Code, CheckCircle2, AlertCircle, ExternalLink, Search, Zap } from "lucide-react";
 import { PermissionCard } from "@/components/permissions/PermissionCard";
 import { SmartAccountSetup } from "@/components/permissions/SmartAccountSetup";
 import { useAdvancedPermissions, ServiceType } from "@/hooks/useAdvancedPermissions";
+import { CONTRACTS } from '@/constants/chains';
+import { sepolia } from 'viem/chains';
 
 interface ContractData {
   address: string;
@@ -43,8 +45,34 @@ export default function ContractInspectorPage() {
     isLoading: permissionLoading 
   } = useAdvancedPermissions();
 
-  const permissionStatus = getPermissionStatus(ServiceType.CONTRACT_INSPECTOR);
-  const hasPermission = permissionStatus?.hasPermission && permissionStatus.isActive;
+  // Read permission directly from blockchain
+  const { data: contractPermission } = useReadContract({
+    address: CONTRACTS[sepolia.id].PermiPayBilling as `0x${string}`,
+    abi: [
+      {
+        name: 'userPermissions',
+        type: 'function',
+        stateMutability: 'view',
+        inputs: [{ name: 'user', type: 'address' }],
+        outputs: [
+          { name: 'spendingLimit', type: 'uint256' },
+          { name: 'spentAmount', type: 'uint256' },
+          { name: 'expiresAt', type: 'uint256' },
+          { name: 'isActive', type: 'bool' },
+          { name: 'sessionAccount', type: 'address' },
+        ],
+      },
+    ],
+    functionName: 'userPermissions',
+    args: address ? [address] : undefined,
+    query: {
+      enabled: !!address && isConnected,
+    },
+  });
+
+  const hasPermission = contractPermission ? (contractPermission as any[])[3] : false;
+  const remainingBudget = contractPermission ? 
+    ((contractPermission as any[])[0] - (contractPermission as any[])[1]) : BigInt(0);
 
   const analyzeContract = async () => {
     if (!contractAddress) {
@@ -197,7 +225,7 @@ export default function ContractInspectorPage() {
                   <div className="text-right">
                     <p className="text-sm text-gray-400 mb-1">Budget Remaining</p>
                     <p className="text-lg font-semibold">
-                      ${(Number(permissionStatus?.remainingBudget || 0n) / 1_000_000).toFixed(2)}
+                      ${(Number(remainingBudget) / 1_000_000).toFixed(2)}
                     </p>
                   </div>
                 </div>

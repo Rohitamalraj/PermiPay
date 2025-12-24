@@ -66,6 +66,7 @@ export function useAdvancedPermissions() {
   const [sessionAccountAddress, setSessionAccountAddress] = useState<Address | null>(null);
   const [smartAccountAddress, setSmartAccountAddress] = useState<Address | null>(null);
   const [smartAccount, setSmartAccount] = useState<MetaMaskSmartAccountType | null>(null);
+  const [permissionCache, setPermissionCache] = useState<{[key: string]: PermissionStatus}>({});
 
   // Initialize Smart Account and session account
   useEffect(() => {
@@ -249,6 +250,20 @@ export function useAdvancedPermissions() {
         permissions[`${userAddress}-${serviceType}`] = storedContext;
         localStorage.setItem(PERMISSION_STORAGE_KEY, JSON.stringify(permissions));
       }
+
+      // Update cache immediately for UI reactivity
+      const permissionStatus: PermissionStatus = {
+        hasPermission: true,
+        spendingLimit,
+        spentAmount: BigInt(0),
+        expiresAt: validUntil * 1000,
+        isActive: true,
+        remainingBudget: spendingLimit,
+      };
+      setPermissionCache(prev => ({
+        ...prev,
+        [`${userAddress}-${serviceType}`]: permissionStatus
+      }));
 
       setIsLoading(false);
       return true;
@@ -487,31 +502,43 @@ export function useAdvancedPermissions() {
 
   /**
    * Get permission status for a service
+   * Checks cache first for immediate UI updates, then falls back to localStorage
    */
   const getPermissionStatus = useCallback((
     serviceType: ServiceType
   ): PermissionStatus | null => {
     if (!userAddress) return null;
 
+    // Check cache first (updated immediately after granting permission)
+    const cacheKey = `${userAddress}-${serviceType}`;
+    if (permissionCache[cacheKey]) {
+      return permissionCache[cacheKey];
+    }
+
+    // Fall back to localStorage
     const stored = localStorage.getItem(PERMISSION_STORAGE_KEY);
     const permissions = stored ? JSON.parse(stored) : {};
-    const permissionKey = `${userAddress}-${serviceType}`;
-    const permissionContext = permissions[permissionKey];
+    const permissionContext = permissions[cacheKey];
 
     if (!permissionContext) return null;
 
     const isExpired = Date.now() > permissionContext.expiresAt;
     const spendingLimit = BigInt(permissionContext.spendingLimit);
 
-    return {
+    const status: PermissionStatus = {
       hasPermission: !isExpired,
       spendingLimit,
-      spentAmount: BigInt(0), // Would need to query contract for actual spent amount
+      spentAmount: BigInt(0),
       expiresAt: permissionContext.expiresAt,
       isActive: !isExpired,
       remainingBudget: spendingLimit,
     };
-  }, [userAddress]);
+
+    // Update cache
+    setPermissionCache(prev => ({ ...prev, [cacheKey]: status }));
+
+    return status;
+  }, [userAddress, permissionCache]);
 
   /**
    * Revoke all permissions and clear session
@@ -524,6 +551,14 @@ export function useAdvancedPermissions() {
     setSessionAccountAddress(null);
     setSmartAccountAddress(null);
     setSmartAccount(null);
+    setPermissionCache({});
+  }, []);
+
+  /**
+   * Refresh permission cache from localStorage
+   */
+  const refreshPermissions = useCallback(() => {
+    setPermissionCache({});
   }, []);
 
   return {
@@ -541,5 +576,6 @@ export function useAdvancedPermissions() {
     checkSmartAccount,
     setupSmartAccount,
     revokePermissions,
+    refreshPermissions,
   };
 }

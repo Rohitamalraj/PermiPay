@@ -37,7 +37,6 @@ export default function Home() {
             <Link href="#how-it-works" className="text-sm text-gray-300 hover:text-white transition-colors">
               How It Works
             </Link>
-          </nav>
             <Link href="#pricing" className="text-sm text-gray-300 hover:text-white transition-colors">
               Pricing
             </Link>

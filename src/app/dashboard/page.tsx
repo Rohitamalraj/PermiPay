@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import { useAccount, useReadContract } from 'wagmi';
 import Link from 'next/link';
+import { CONTRACTS } from '@/constants/chains';
+import { sepolia } from 'viem/chains';
 
 interface UserPermission {
   id: string;
@@ -31,13 +33,62 @@ export default function UserDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Read permission directly from blockchain contract
+  const { data: contractPermission, isLoading: contractLoading, refetch } = useReadContract({
+    address: CONTRACTS[sepolia.id].PermiPayBilling as `0x${string}`,
+    abi: [
+      {
+        name: 'userPermissions',
+        type: 'function',
+        stateMutability: 'view',
+        inputs: [{ name: 'user', type: 'address' }],
+        outputs: [
+          { name: 'spendingLimit', type: 'uint256' },
+          { name: 'spentAmount', type: 'uint256' },
+          { name: 'expiresAt', type: 'uint256' },
+          { name: 'isActive', type: 'bool' },
+          { name: 'sessionAccount', type: 'address' },
+        ],
+      },
+    ],
+    functionName: 'userPermissions',
+    args: address ? [address] : undefined,
+    query: {
+      enabled: !!address && isConnected,
+    },
+  });
+
   useEffect(() => {
     if (isConnected && address) {
       fetchUserData();
+      refetch(); // Refresh contract data
     } else {
       setLoading(false);
     }
-  }, [address, isConnected]);
+  }, [address, isConnected, refetch]);
+
+  // Update permission state when contract data changes
+  useEffect(() => {
+    if (contractPermission && address) {
+      const [spendingLimit, spentAmount, expiresAt, isActive] = contractPermission as [bigint, bigint, bigint, boolean, string];
+      
+      if (isActive) {
+        setPermission({
+          id: `${address}-permission`,
+          user: address,
+          spendingLimit: spendingLimit.toString(),
+          spentAmount: spentAmount.toString(),
+          remainingBudget: (spendingLimit - spentAmount).toString(),
+          expiresAt: expiresAt.toString(), // Store as-is (already in seconds from contract)
+          isActive: true,
+          grantedAt: Date.now().toString(),
+          totalExecutions: 0, // Will be calculated from executions
+        });
+      } else {
+        setPermission(null);
+      }
+    }
+  }, [contractPermission, address]);
 
   const fetchUserData = async () => {
     if (!address) return;
@@ -54,30 +105,7 @@ export default function UserDashboard() {
         return;
       }
 
-      // Fetch user permission
-      const permissionResponse = await fetch(envioUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          query: `
-            query {
-              Permission(where: {user: {_eq: "${address.toLowerCase()}"}}) {
-                id
-                user
-                spendingLimit
-                spentAmount
-                remainingBudget
-                expiresAt
-                isActive
-                grantedAt
-                totalExecutions
-              }
-            }
-          `,
-        }),
-      });
-
-      // Fetch user executions
+      // Fetch user executions only (permission comes from contract)
       const executionsResponse = await fetch(envioUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -100,14 +128,16 @@ export default function UserDashboard() {
         }),
       });
 
-      const permissionData = await permissionResponse.json();
       const executionsData = await executionsResponse.json();
 
-      if (permissionData.data?.Permission && permissionData.data.Permission.length > 0) {
-        setPermission(permissionData.data.Permission[0]);
-      }
+      console.log('Executions response:', executionsData);
+
       if (executionsData.data?.ServiceExecution) {
         setExecutions(executionsData.data.ServiceExecution);
+        console.log('Loaded executions:', executionsData.data.ServiceExecution.length);
+      } else if (executionsData.errors) {
+        console.error('GraphQL errors:', executionsData.errors);
+        setError(`GraphQL error: ${executionsData.errors[0]?.message || 'Unknown error'}`);
       }
 
       setLoading(false);
@@ -245,7 +275,7 @@ export default function UserDashboard() {
 
               <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 rounded-xl p-6">
                 <p className="text-purple-300 text-sm font-medium mb-1">Total Services</p>
-                <p className="text-3xl font-bold text-white">{permission.totalExecutions}</p>
+                <p className="text-3xl font-bold text-white">{executions.length}</p>
                 <p className="text-purple-300 text-xs mt-1">services executed</p>
               </div>
 
@@ -259,7 +289,7 @@ export default function UserDashboard() {
                   )}
                 </p>
                 <p className="text-orange-300 text-xs mt-1">
-                  Expires {new Date(Number(permission.expiresAt) * 1000).toLocaleDateString()}
+                  Expires {new Date(Number(permission.expiresAt) * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                 </p>
               </div>
             </div>
