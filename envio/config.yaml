@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./node_modules/envio/evm.schema.json
 name: permipay-analytics
 description: PermiPay Analytics Indexer - Permission-metered billing tracker
 version: 2.23.3
