@@ -88,7 +88,8 @@ export default function AnalyticsPage() {
         body: JSON.stringify({
           query: `
             query {
-              globalStats(id: "global") {
+              GlobalStats(where: {id: {_eq: "global"}}) {
+                id
                 totalPermissionsGranted
                 activePermissions
                 totalRevenue
@@ -107,7 +108,7 @@ export default function AnalyticsPage() {
         body: JSON.stringify({
           query: `
             query {
-              dailyStats(orderBy: "date", orderDirection: "desc", limit: 30) {
+              DailyStats(order_by: {date: desc}, limit: 30) {
                 date
                 permissionsGranted
                 serviceExecutions
@@ -128,9 +129,8 @@ export default function AnalyticsPage() {
         body: JSON.stringify({
           query: `
             query {
-              serviceExecutions(
-                orderBy: "timestamp"
-                orderDirection: "desc"
+              ServiceExecution(
+                order_by: {timestamp: desc}
                 limit: 10
               ) {
                 user
@@ -148,14 +148,14 @@ export default function AnalyticsPage() {
       const dailyData = await dailyResponse.json();
       const executionsData = await executionsResponse.json();
 
-      if (globalData.data?.globalStats) {
-        setGlobalStats(globalData.data.globalStats);
+      if (globalData.data?.GlobalStats && globalData.data.GlobalStats.length > 0) {
+        setGlobalStats(globalData.data.GlobalStats[0]);
       }
-      if (dailyData.data?.dailyStats) {
-        setDailyStats(dailyData.data.dailyStats.reverse());
+      if (dailyData.data?.DailyStats) {
+        setDailyStats(dailyData.data.DailyStats.reverse());
       }
-      if (executionsData.data?.serviceExecutions) {
-        setRecentExecutions(executionsData.data.serviceExecutions);
+      if (executionsData.data?.ServiceExecution) {
+        setRecentExecutions(executionsData.data.ServiceExecution);
       }
 
       setLoading(false);
