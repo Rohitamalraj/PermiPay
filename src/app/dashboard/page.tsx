@@ -1,279 +1,379 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useAccount } from "wagmi";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { FEATURES } from "@/constants/features";
-import { Shield, Clock, DollarSign, Activity, CheckCircle2, XCircle } from "lucide-react";
+import { useState, useEffect } from 'react';
+import { useAccount } from 'wagmi';
+import Link from 'next/link';
 
-export default function DashboardPage() {
+interface UserPermission {
+  id: string;
+  user: string;
+  spendingLimit: string;
+  spentAmount: string;
+  remainingBudget: string;
+  expiresAt: string;
+  isActive: boolean;
+  grantedAt: string;
+  totalExecutions: number;
+}
+
+interface UserExecution {
+  id: string;
+  serviceType: string;
+  cost: string;
+  timestamp: string;
+  transactionHash: string;
+}
+
+export default function UserDashboard() {
   const { address, isConnected } = useAccount();
-  const [permissionStatus, setPermissionStatus] = useState<any>(null);
-  const [spendingLimit, setSpendingLimit] = useState("10");
-  const [duration, setDuration] = useState("30");
-  const [isGranting, setIsGranting] = useState(false);
+  const [permission, setPermission] = useState<UserPermission | null>(null);
+  const [executions, setExecutions] = useState<UserExecution[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isConnected && address) {
-      fetchPermissionStatus();
+      fetchUserData();
+    } else {
+      setLoading(false);
     }
-  }, [isConnected, address]);
+  }, [address, isConnected]);
 
-  const fetchPermissionStatus = async () => {
-    // TODO: Call contract to get permission status
-    // Placeholder data for now
-    setPermissionStatus({
-      hasPermission: false,
-      spendingLimit: 0,
-      spentAmount: 0,
-      remainingBudget: 0,
-      expiresAt: 0,
-      isActive: false,
-    });
-  };
+  const fetchUserData = async () => {
+    if (!address) return;
 
-  const handleGrantPermission = async () => {
-    setIsGranting(true);
     try {
-      // TODO: Implement MetaMask Advanced Permissions (ERC-7715) flow
-      // 1. Request permission via wallet_grantPermissions
-      // 2. User approves in MetaMask with human-readable confirmation
-      // 3. App can now execute services without repeated signatures
+      setLoading(true);
+      setError(null);
+
+      const envioUrl = process.env.NEXT_PUBLIC_ENVIO_GRAPHQL_URL;
       
-      console.log("Granting permission:", {
-        spendingLimit: parseFloat(spendingLimit) * 1e6, // Convert to 6 decimals
-        duration: parseInt(duration) * 86400, // Convert days to seconds
+      if (!envioUrl) {
+        setError('Analytics not configured');
+        setLoading(false);
+        return;
+      }
+
+      // Fetch user permission
+      const permissionResponse = await fetch(envioUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `
+            query {
+              Permission(where: {user: {_eq: "${address.toLowerCase()}"}}) {
+                id
+                user
+                spendingLimit
+                spentAmount
+                remainingBudget
+                expiresAt
+                isActive
+                grantedAt
+                totalExecutions
+              }
+            }
+          `,
+        }),
       });
 
-      // Placeholder success
-      alert("Permission granted! (Contract integration pending)");
-      await fetchPermissionStatus();
-    } catch (error) {
-      console.error("Error granting permission:", error);
-      alert("Failed to grant permission");
-    } finally {
-      setIsGranting(false);
+      // Fetch user executions
+      const executionsResponse = await fetch(envioUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `
+            query {
+              ServiceExecution(
+                where: {user: {_eq: "${address.toLowerCase()}"}}
+                order_by: {timestamp: desc}
+                limit: 50
+              ) {
+                id
+                serviceType
+                cost
+                timestamp
+                transactionHash
+              }
+            }
+          `,
+        }),
+      });
+
+      const permissionData = await permissionResponse.json();
+      const executionsData = await executionsResponse.json();
+
+      if (permissionData.data?.Permission && permissionData.data.Permission.length > 0) {
+        setPermission(permissionData.data.Permission[0]);
+      }
+      if (executionsData.data?.ServiceExecution) {
+        setExecutions(executionsData.data.ServiceExecution);
+      }
+
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching user data:', err);
+      setError('Failed to load dashboard data');
+      setLoading(false);
     }
   };
 
-  const handleRevokePermission = async () => {
-    // TODO: Implement revoke permission
-    alert("Revoke permission (Contract integration pending)");
+  const getServiceIcon = (type: string) => {
+    switch (type) {
+      case 'CONTRACT_INSPECTOR':
+        return '🔍';
+      case 'WALLET_REPUTATION':
+        return '⭐';
+      case 'WALLET_AUDIT':
+        return '🛡️';
+      default:
+        return '📊';
+    }
   };
+
+  const getServiceName = (type: string) => {
+    switch (type) {
+      case 'CONTRACT_INSPECTOR':
+        return 'Contract Inspector';
+      case 'WALLET_REPUTATION':
+        return 'Wallet Reputation';
+      case 'WALLET_AUDIT':
+        return 'Wallet Audit';
+      default:
+        return type;
+    }
+  };
+
+  const getServiceCost = (type: string) => {
+    switch (type) {
+      case 'CONTRACT_INSPECTOR':
+        return '$0.05';
+      case 'WALLET_REPUTATION':
+        return '$0.10';
+      case 'WALLET_AUDIT':
+        return '$0.15';
+      default:
+        return '$0.00';
+    }
+  };
+
+  // Calculate service usage breakdown
+  const serviceBreakdown = executions.reduce((acc, exec) => {
+    const type = exec.serviceType;
+    if (!acc[type]) {
+      acc[type] = { count: 0, totalCost: 0 };
+    }
+    acc[type].count++;
+    acc[type].totalCost += Number(exec.cost);
+    return acc;
+  }, {} as Record<string, { count: number; totalCost: number }>);
 
   if (!isConnected) {
     return (
-      <div className="min-h-screen bg-black pt-32 px-6">
-        <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-4xl font-bold mb-4">Connect Your Wallet</h1>
-          <p className="text-gray-400 mb-8">
-            Please connect your MetaMask wallet to access the dashboard
-          </p>
+      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-12 text-center">
+            <h1 className="text-3xl font-bold text-white mb-4">🔐 Connect Your Wallet</h1>
+            <p className="text-gray-400 mb-6">
+              Please connect your wallet to view your personal dashboard
+            </p>
+            <Link 
+              href="/"
+              className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors"
+            >
+              Go to Home
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+            <p className="text-gray-400 mt-4">Loading your dashboard...</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black pt-32 px-6 pb-20">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-8">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-12">
-          <h1 className="text-4xl font-bold mb-4">
-            <span className="bg-gradient-to-r from-[#0052FF] to-[#3387FF] bg-clip-text text-transparent">
-              Dashboard
-            </span>
-          </h1>
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-white mb-2">👤 My Dashboard</h1>
           <p className="text-gray-400">
-            Grant permission once, access services without repeated signatures
+            Personal spending and usage overview for {address?.slice(0, 6)}...{address?.slice(-4)}
           </p>
         </div>
 
-        {/* Permission Status */}
-        <Card className="bg-white/5 border-white/10 p-8 mb-8">
-          <div className="flex items-start justify-between mb-6">
-            <div>
-              <h2 className="text-2xl font-bold mb-2">Permission Status</h2>
-              <p className="text-gray-400">
-                Your current spending authorization for PermiPay Analytics
-              </p>
-            </div>
-            {permissionStatus?.isActive ? (
-              <div className="flex items-center gap-2 text-green-400">
-                <CheckCircle2 className="h-5 w-5" />
-                <span className="font-semibold">Active</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 text-gray-400">
-                <XCircle className="h-5 w-5" />
-                <span className="font-semibold">No Permission</span>
-              </div>
-            )}
+        {error && (
+          <div className="bg-red-500/20 border border-red-500 rounded-lg p-4 mb-6">
+            <p className="text-red-400">{error}</p>
           </div>
+        )}
 
-          {permissionStatus?.isActive ? (
-            <div className="grid md:grid-cols-3 gap-6 mb-6">
-              <div className="bg-black/40 p-6 rounded-lg border border-white/10">
-                <div className="flex items-center gap-3 mb-2">
-                  <DollarSign className="h-5 w-5 text-[#0052FF]" />
-                  <span className="text-gray-400">Total Budget</span>
-                </div>
-                <p className="text-2xl font-bold">
-                  ${(permissionStatus.spendingLimit / 1e6).toFixed(2)}
+        {/* Permission Overview */}
+        {permission ? (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-500/30 rounded-xl p-6">
+                <p className="text-blue-300 text-sm font-medium mb-1">Total Spent</p>
+                <p className="text-3xl font-bold text-white">
+                  ${(Number(permission.spentAmount) / 1_000_000).toFixed(2)}
+                </p>
+                <p className="text-blue-300 text-xs mt-1">
+                  of ${(Number(permission.spendingLimit) / 1_000_000).toFixed(2)} limit
                 </p>
               </div>
 
-              <div className="bg-black/40 p-6 rounded-lg border border-white/10">
-                <div className="flex items-center gap-3 mb-2">
-                  <Activity className="h-5 w-5 text-[#3387FF]" />
-                  <span className="text-gray-400">Remaining</span>
-                </div>
-                <p className="text-2xl font-bold text-[#3387FF]">
-                  ${(permissionStatus.remainingBudget / 1e6).toFixed(2)}
+              <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 border border-green-500/30 rounded-xl p-6">
+                <p className="text-green-300 text-sm font-medium mb-1">Remaining Budget</p>
+                <p className="text-3xl font-bold text-white">
+                  ${(Number(permission.remainingBudget) / 1_000_000).toFixed(2)}
+                </p>
+                <p className="text-green-300 text-xs mt-1">
+                  {((Number(permission.remainingBudget) / Number(permission.spendingLimit)) * 100).toFixed(0)}% available
                 </p>
               </div>
 
-              <div className="bg-black/40 p-6 rounded-lg border border-white/10">
-                <div className="flex items-center gap-3 mb-2">
-                  <Clock className="h-5 w-5 text-gray-400" />
-                  <span className="text-gray-400">Expires</span>
-                </div>
-                <p className="text-2xl font-bold">
-                  {new Date(permissionStatus.expiresAt * 1000).toLocaleDateString()}
+              <div className="bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30 rounded-xl p-6">
+                <p className="text-purple-300 text-sm font-medium mb-1">Total Services</p>
+                <p className="text-3xl font-bold text-white">{permission.totalExecutions}</p>
+                <p className="text-purple-300 text-xs mt-1">services executed</p>
+              </div>
+
+              <div className="bg-gradient-to-br from-orange-500/20 to-orange-600/20 border border-orange-500/30 rounded-xl p-6">
+                <p className="text-orange-300 text-sm font-medium mb-1">Permission Status</p>
+                <p className="text-2xl font-bold text-white">
+                  {permission.isActive ? (
+                    <span className="text-green-400">✓ Active</span>
+                  ) : (
+                    <span className="text-red-400">✗ Inactive</span>
+                  )}
+                </p>
+                <p className="text-orange-300 text-xs mt-1">
+                  Expires {new Date(Number(permission.expiresAt) * 1000).toLocaleDateString()}
                 </p>
               </div>
+            </div>
+
+            {/* Spending Progress Bar */}
+            <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 mb-8">
+              <h3 className="text-xl font-semibold text-white mb-4">💰 Spending Overview</h3>
+              <div className="mb-2 flex justify-between text-sm">
+                <span className="text-gray-400">
+                  Spent: ${(Number(permission.spentAmount) / 1_000_000).toFixed(2)}
+                </span>
+                <span className="text-gray-400">
+                  Limit: ${(Number(permission.spendingLimit) / 1_000_000).toFixed(2)}
+                </span>
+              </div>
+              <div className="w-full bg-slate-700 rounded-full h-4">
+                <div 
+                  className="bg-gradient-to-r from-blue-500 to-purple-500 h-4 rounded-full transition-all flex items-center justify-center text-xs text-white font-semibold"
+                  style={{ 
+                    width: `${Math.min((Number(permission.spentAmount) / Number(permission.spendingLimit)) * 100, 100)}%` 
+                  }}
+                >
+                  {((Number(permission.spentAmount) / Number(permission.spendingLimit)) * 100).toFixed(0)}%
+                </div>
+              </div>
+            </div>
+
+            {/* Service Breakdown */}
+            <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6 mb-8">
+              <h3 className="text-xl font-semibold text-white mb-4">📊 Service Usage Breakdown</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {Object.entries(serviceBreakdown).map(([type, data]) => (
+                  <div key={type} className="bg-slate-700/50 border border-slate-600 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-2xl">{getServiceIcon(type)}</span>
+                      <span className="text-gray-400 text-sm">{data.count}x</span>
+                    </div>
+                    <h4 className="text-white font-semibold mb-1">{getServiceName(type)}</h4>
+                    <p className="text-gray-400 text-sm mb-1">{getServiceCost(type)} per use</p>
+                    <p className="text-purple-400 font-semibold">
+                      ${(data.totalCost / 1_000_000).toFixed(2)} total
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="bg-yellow-500/20 border border-yellow-500 rounded-xl p-8 mb-8 text-center">
+            <h3 className="text-2xl font-bold text-yellow-400 mb-2">⚠️ No Active Permission</h3>
+            <p className="text-gray-300 mb-4">
+              You haven't granted any spending permissions yet
+            </p>
+            <Link 
+              href="/"
+              className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors"
+            >
+              Grant Permission & Start Using Services
+            </Link>
+          </div>
+        )}
+
+        {/* Transaction History */}
+        <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
+          <h3 className="text-xl font-semibold text-white mb-4">📜 Transaction History</h3>
+          {executions.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-400">No transactions yet</p>
             </div>
           ) : (
-            <div className="bg-gradient-to-br from-[#0052FF]/10 to-[#3387FF]/10 p-8 rounded-xl border border-[#0052FF]/30 mb-6">
-              <h3 className="text-xl font-bold mb-4">Grant Permission to Get Started</h3>
-              <p className="text-gray-300 mb-6">
-                Set a spending limit and duration. The app will automatically charge for services you use—no repeated signatures needed.
-              </p>
-
-              <div className="grid md:grid-cols-2 gap-6 mb-6">
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Spending Limit (USDC)
-                  </label>
-                  <input
-                    type="number"
-                    value={spendingLimit}
-                    onChange={(e) => setSpendingLimit(e.target.value)}
-                    className="w-full px-4 py-3 bg-black/40 border border-white/10 rounded-lg text-white focus:outline-none focus:border-[#0052FF]"
-                    placeholder="10.00"
-                    step="0.1"
-                    min="0"
-                  />
-                  <p className="text-sm text-gray-400 mt-2">
-                    Recommended: $10 for ~20-30 service calls
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Duration (Days)
-                  </label>
-                  <input
-                    type="number"
-                    value={duration}
-                    onChange={(e) => setDuration(e.target.value)}
-                    className="w-full px-4 py-3 bg-black/40 border border-white/10 rounded-lg text-white focus:outline-none focus:border-[#0052FF]"
-                    placeholder="30"
-                    min="1"
-                  />
-                  <p className="text-sm text-gray-400 mt-2">
-                    Permission expires after this period
-                  </p>
-                </div>
-              </div>
-
-              <Button
-                onClick={handleGrantPermission}
-                disabled={isGranting}
-                className="w-full bg-gradient-to-r from-[#0052FF] to-[#3387FF] text-white hover:opacity-90 py-6 text-lg"
-              >
-                {isGranting ? (
-                  "Requesting Permission..."
-                ) : (
-                  <>
-                    <Shield className="h-5 w-5 mr-2" />
-                    Grant Permission via MetaMask
-                  </>
-                )}
-              </Button>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="text-gray-400 border-b border-slate-700">
+                    <th className="pb-3 font-medium">Service</th>
+                    <th className="pb-3 font-medium">Cost</th>
+                    <th className="pb-3 font-medium">Date & Time</th>
+                    <th className="pb-3 font-medium">Transaction</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {executions.map((exec) => (
+                    <tr key={exec.id} className="border-b border-slate-700/50">
+                      <td className="py-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl">{getServiceIcon(exec.serviceType)}</span>
+                          <span className="text-white font-medium">{getServiceName(exec.serviceType)}</span>
+                        </div>
+                      </td>
+                      <td className="py-4">
+                        <span className="text-purple-400 font-semibold">
+                          ${(Number(exec.cost) / 1_000_000).toFixed(2)}
+                        </span>
+                      </td>
+                      <td className="py-4 text-gray-300">
+                        {new Date(Number(exec.timestamp) * 1000).toLocaleString()}
+                      </td>
+                      <td className="py-4">
+                        <a
+                          href={`https://sepolia.etherscan.io/tx/${exec.transactionHash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-400 hover:text-blue-300 font-medium"
+                        >
+                          View →
+                        </a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
-
-          {permissionStatus?.isActive && (
-            <Button
-              onClick={handleRevokePermission}
-              variant="outline"
-              className="border-red-500/30 text-red-400 hover:bg-red-500/10"
-            >
-              Revoke Permission
-            </Button>
-          )}
-        </Card>
-
-        {/* Available Services */}
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold mb-6">Available Services</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            {FEATURES.map((feature) => (
-              <Card
-                key={feature.id}
-                className="bg-white/5 border-white/10 p-6 hover:bg-white/10 transition-colors"
-              >
-                <div className="text-4xl mb-4">{feature.icon}</div>
-                <h3 className="text-xl font-bold mb-2">{feature.name}</h3>
-                <p className="text-gray-400 text-sm mb-4">{feature.description}</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-2xl font-bold text-[#0052FF]">
-                    ${feature.cost.toFixed(2)}
-                  </span>
-                  <span className="text-sm text-gray-400">per use</span>
-                </div>
-              </Card>
-            ))}
-          </div>
         </div>
-
-        {/* How It Works */}
-        <Card className="bg-gradient-to-br from-[#0052FF]/5 to-[#3387FF]/5 border-[#0052FF]/20 p-8">
-          <h2 className="text-2xl font-bold mb-6">How Permission-Metered Billing Works</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            <div>
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#0052FF] to-[#3387FF] flex items-center justify-center text-xl font-bold mb-4">
-                1
-              </div>
-              <h3 className="font-bold mb-2">Grant Permission Once</h3>
-              <p className="text-gray-400 text-sm">
-                Set your budget and duration in MetaMask. Uses ERC-7715 Advanced Permissions.
-              </p>
-            </div>
-
-            <div>
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#0052FF] to-[#3387FF] flex items-center justify-center text-xl font-bold mb-4">
-                2
-              </div>
-              <h3 className="font-bold mb-2">Use Services Freely</h3>
-              <p className="text-gray-400 text-sm">
-                Access any service without signing each transaction. App charges automatically.
-              </p>
-            </div>
-
-            <div>
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#0052FF] to-[#3387FF] flex items-center justify-center text-xl font-bold mb-4">
-                3
-              </div>
-              <h3 className="font-bold mb-2">Track On-Chain</h3>
-              <p className="text-gray-400 text-sm">
-                All usage is recorded on Base. View complete history via Envio indexer.
-              </p>
-            </div>
-          </div>
-        </Card>
       </div>
     </div>
   );

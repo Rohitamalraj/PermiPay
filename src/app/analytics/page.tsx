@@ -56,10 +56,23 @@ interface ServiceExecution {
   transactionHash: string;
 }
 
+interface Permission {
+  id: string;
+  user: string;
+  spendingLimit: string;
+  spentAmount: string;
+  remainingBudget: string;
+  expiresAt: string;
+  isActive: boolean;
+  grantedAt: string;
+  totalExecutions: number;
+}
+
 export default function AnalyticsPage() {
   const [globalStats, setGlobalStats] = useState<GlobalStats | null>(null);
   const [dailyStats, setDailyStats] = useState<DailyStat[]>([]);
   const [recentExecutions, setRecentExecutions] = useState<ServiceExecution[]>([]);
+  const [permissions, setPermissions] = useState<Permission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -144,9 +157,33 @@ export default function AnalyticsPage() {
         }),
       });
 
+      // Fetch permissions
+      const permissionsResponse = await fetch(envioUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: `
+            query {
+              Permission(where: {isActive: {_eq: true}}) {
+                id
+                user
+                spendingLimit
+                spentAmount
+                remainingBudget
+                expiresAt
+                isActive
+                grantedAt
+                totalExecutions
+              }
+            }
+          `,
+        }),
+      });
+
       const globalData = await globalResponse.json();
       const dailyData = await dailyResponse.json();
       const executionsData = await executionsResponse.json();
+      const permissionsData = await permissionsResponse.json();
 
       if (globalData.data?.GlobalStats && globalData.data.GlobalStats.length > 0) {
         setGlobalStats(globalData.data.GlobalStats[0]);
@@ -156,6 +193,9 @@ export default function AnalyticsPage() {
       }
       if (executionsData.data?.ServiceExecution) {
         setRecentExecutions(executionsData.data.ServiceExecution);
+      }
+      if (permissionsData.data?.Permission) {
+        setPermissions(permissionsData.data.Permission);
       }
 
       setLoading(false);
@@ -360,6 +400,81 @@ export default function AnalyticsPage() {
           <h3 className="text-xl font-semibold text-white mb-4">📊 Service Usage Over Time</h3>
           <div className="h-80">
             <Bar data={executionsChartData} options={chartOptions} />
+          </div>
+        </div>
+
+        {/* Active Users & Permissions */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Active Permissions List */}
+          <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
+            <h3 className="text-xl font-semibold text-white mb-4">👥 Active Permissions ({permissions.length})</h3>
+            {permissions.length === 0 ? (
+              <p className="text-gray-400 text-center py-8">No active permissions</p>
+            ) : (
+              <div className="space-y-3">
+                {permissions.map((perm) => (
+                  <div key={perm.id} className="bg-slate-700/50 border border-slate-600 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-blue-400 font-mono text-sm">
+                        {perm.user.slice(0, 6)}...{perm.user.slice(-4)}
+                      </span>
+                      <span className="text-green-400 text-xs px-2 py-1 bg-green-500/20 rounded">Active</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <p className="text-gray-400">Spent</p>
+                        <p className="text-white font-semibold">${(Number(perm.spentAmount) / 1_000_000).toFixed(2)}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400">Remaining</p>
+                        <p className="text-white font-semibold">${(Number(perm.remainingBudget) / 1_000_000).toFixed(2)}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400">Executions</p>
+                        <p className="text-white font-semibold">{perm.totalExecutions}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400">Expires</p>
+                        <p className="text-white font-semibold">
+                          {new Date(Number(perm.expiresAt) * 1000).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Unique Users Stats */}
+          <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-6">
+            <h3 className="text-xl font-semibold text-white mb-4">📊 User Statistics</h3>
+            <div className="space-y-4">
+              {permissions.map((perm) => (
+                <div key={perm.id} className="bg-slate-700/50 border border-slate-600 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-blue-400 font-mono text-sm">
+                      {perm.user.slice(0, 6)}...{perm.user.slice(-4)}
+                    </span>
+                    <span className="text-purple-400 text-xs font-semibold">
+                      ${(Number(perm.spentAmount) / 1_000_000).toFixed(2)} spent
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-600 rounded-full h-2 mb-2">
+                    <div 
+                      className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all"
+                      style={{ 
+                        width: `${(Number(perm.spentAmount) / Number(perm.spendingLimit)) * 100}%` 
+                      }}
+                    />
+                  </div>
+                  <p className="text-gray-400 text-xs">
+                    {perm.totalExecutions} executions • 
+                    {' '}{((Number(perm.spentAmount) / Number(perm.spendingLimit)) * 100).toFixed(0)}% used
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
