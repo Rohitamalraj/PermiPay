@@ -28,12 +28,16 @@ export default function Home() {
             <Link href="/analytics" className="text-sm text-gray-300 hover:text-white transition-colors">
               Analytics
             </Link>
+            <Link href="/dashboard" className="text-sm text-gray-300 hover:text-white transition-colors">
+              Dashboard
+            </Link>
             <Link href="/profile" className="text-sm text-gray-300 hover:text-white transition-colors">
               Profile
             </Link>
             <Link href="#how-it-works" className="text-sm text-gray-300 hover:text-white transition-colors">
               How It Works
             </Link>
+          </nav>
             <Link href="#pricing" className="text-sm text-gray-300 hover:text-white transition-colors">
               Pricing
             </Link>
