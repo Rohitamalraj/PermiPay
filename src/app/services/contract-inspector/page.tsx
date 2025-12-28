@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useAccount, useReadContract } from "wagmi";
+import type { Address } from "viem";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Code, CheckCircle2, AlertCircle, ExternalLink, Search, Zap } from "lucide-react";
@@ -70,9 +71,9 @@ export default function ContractInspectorPage() {
     },
   });
 
-  const hasPermission = contractPermission ? (contractPermission as any[])[3] : false;
+  const hasPermission = contractPermission ? (contractPermission as readonly [bigint, bigint, bigint, boolean, `0x${string}`])[3] : false;
   const remainingBudget = contractPermission ? 
-    ((contractPermission as any[])[0] - (contractPermission as any[])[1]) : BigInt(0);
+    ((contractPermission as readonly [bigint, bigint, bigint, boolean, `0x${string}`])[0] - (contractPermission as readonly [bigint, bigint, bigint, boolean, `0x${string}`])[1]) : BigInt(0);
 
   const analyzeContract = async () => {
     if (!contractAddress) {

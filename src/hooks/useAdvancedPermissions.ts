@@ -222,10 +222,9 @@ export function useAdvancedPermissions() {
             type: 'erc20-token-periodic',
             data: {
               tokenAddress: CONTRACTS[sepolia.id].USDC,
-              periodAmount: `0x${spendingLimit.toString(16)}`,
-              periodDuration: `0x${periodSeconds.toString(16)}`,
-              startTime: `0x${startTime.toString(16)}`,
-              endTime: `0x${validUntil.toString(16)}`,
+              periodAmount: spendingLimit,
+              periodDuration: periodSeconds,
+              startTime: startTime,
             },
           },
           isAdjustmentAllowed: true,
@@ -372,7 +371,7 @@ export function useAdvancedPermissions() {
         ],
         functionName: 'userPermissions',
         args: [userAddress],
-      }) as any[];
+      }) as readonly [bigint, bigint, bigint, boolean, `0x${string}`];
 
       const [spendingLimit, spentAmount, expiresAt, isActive, registeredSession] = permissionData;
 

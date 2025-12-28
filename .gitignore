@@ -39,4 +39,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-*md
+
+# envio (should be in separate folder)
+/envio/
+
+# internal documentation (not for commit)
+DEPLOYMENT.md
+ERC7715_IMPLEMENTATION_STATUS.md
+SMART_ACCOUNT_IMPLEMENTATION.md
+STATUS.md
+TESTING_GUIDE.md
+WALLET_AUDIT_IMPLEMENTATION.md

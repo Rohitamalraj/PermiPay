@@ -6,15 +6,16 @@
  */
 
 import { toMetaMaskSmartAccount, Implementation } from '@metamask/smart-accounts-kit';
-import type { SmartAccount } from 'permissionless/accounts';
-import type { EntryPoint } from 'permissionless/types';
+// import type { SmartAccount } from 'permissionless/accounts';
+// import type { EntryPoint } from 'permissionless/types';
 import type { WalletClient, Address } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { generatePrivateKey } from 'viem/accounts';
-import { bundlerClient, publicClient } from './bundler';
+import { publicClient, createERC7710BundlerClient } from './bundler';
 import { sepolia } from 'viem/chains';
 
-export type MetaMaskSmartAccountType = SmartAccount<EntryPoint, 'MetaMaskSmartAccount'>;
+// Using generic type to avoid permissionless dependency
+export type MetaMaskSmartAccountType = any; // SmartAccount<EntryPoint, 'MetaMaskSmartAccount'>;
 
 /**
  * Session Account for delegation
@@ -127,15 +128,17 @@ export async function createMetaMaskSmartAccount(
     throw new Error('Wallet client must have an account');
   }
 
+  const account = walletClient.account; // Type narrowing
+
   try {
     const smartAccount = await toMetaMaskSmartAccount({
       client: publicClient,
       implementation: Implementation.Hybrid,
-      deployParams: [walletClient.account.address, [], [], []],
+      deployParams: [account.address, [], [], []],
       deploySalt: '0x',
       signer: {
-        account: walletClient.account,
-        walletClient: walletClient,
+        account: account,
+        walletClient: walletClient as any,
       },
     });
 
