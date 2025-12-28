@@ -228,7 +228,7 @@ export default function WalletAuditPage() {
             </Card>
 
             {hasPermission && (
-              <Card className="bg-gradient-to-br from-green-500/10 to-blue-500/10 border-green-500/30 p-6">
+              <Card className="bg-gradient-to-br from-green-500/10 to-orange-500/10 border-green-500/30 p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-400 mb-1">Permission Status</p>
@@ -315,7 +315,7 @@ export default function WalletAuditPage() {
                 href={`https://sepolia.etherscan.io/tx/${transactionHash}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors"
+                className="flex items-center gap-2 text-orange-400 hover:text-orange-300 transition-colors"
               >
                 <span className="text-sm font-mono">
                   {transactionHash.slice(0, 6)}...{transactionHash.slice(-4)}
@@ -464,16 +464,16 @@ export default function WalletAuditPage() {
 
             {/* Recommendations */}
             {auditData.recommendations.length > 0 && (
-              <Card className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-blue-500/30 p-8">
+              <Card className="bg-gradient-to-br from-orange-500/10 to-purple-500/10 border-orange-500/30 p-8">
                 <h3 className="text-2xl font-bold mb-6 flex items-center gap-3">
-                  <Info className="h-6 w-6 text-blue-400" />
+                  <Info className="h-6 w-6 text-orange-400" />
                   Recommendations
                 </h3>
                 <ul className="space-y-3">
                   {auditData.recommendations.map((rec, i) => (
                     <li key={i} className="flex items-start gap-3">
-                      <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span className="text-sm font-bold text-blue-400">{i + 1}</span>
+                      <div className="w-6 h-6 rounded-full bg-orange-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="text-sm font-bold text-orange-400">{i + 1}</span>
                       </div>
                       <span className="text-gray-300 leading-relaxed">{rec}</span>
                     </li>
@@ -554,7 +554,7 @@ export default function WalletAuditPage() {
                         href={`https://sepolia.etherscan.io/address/${approval.spender.address}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                        className="inline-flex items-center gap-2 text-sm text-orange-400 hover:text-orange-300 transition-colors"
                       >
                         View Contract on Etherscan
                         <ExternalLink className="h-4 w-4" />
@@ -581,3 +581,4 @@ export default function WalletAuditPage() {
     </div>
   );
 }
+

@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
+import Link from 'next/link';
+import { ArrowLeft, Home, BarChart3, Zap } from 'lucide-react';
+import { ConnectButton } from '@/components/wallet/ConnectButton';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -213,8 +216,8 @@ export default function AnalyticsPage() {
       {
         label: 'Daily Revenue (USDC)',
         data: dailyStats.map((d) => Number(d.revenue) / 1_000_000),
-        borderColor: 'rgb(59, 130, 246)',
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        borderColor: 'rgb(255, 158, 0)',
+        backgroundColor: 'rgba(255, 158, 0, 0.1)',
         fill: true,
         tension: 0.4,
       },
@@ -227,7 +230,7 @@ export default function AnalyticsPage() {
       {
         label: 'Contract Inspector',
         data: dailyStats.map((d) => d.contractInspectorCount),
-        backgroundColor: 'rgba(59, 130, 246, 0.8)',
+        backgroundColor: 'rgba(255, 158, 0, 0.8)',
       },
       {
         label: 'Wallet Reputation',
@@ -252,14 +255,14 @@ export default function AnalyticsPage() {
           dailyStats.reduce((sum, d) => sum + d.walletAuditCount, 0),
         ],
         backgroundColor: [
-          'rgba(59, 130, 246, 0.8)',
+          'rgba(255, 158, 0, 0.8)',
           'rgba(16, 185, 129, 0.8)',
-          'rgba(139, 92, 246, 0.8)',
+          'rgba(251, 191, 36, 0.8)',
         ],
         borderColor: [
-          'rgb(59, 130, 246)',
+          'rgb(255, 158, 0)',
           'rgb(16, 185, 129)',
-          'rgb(139, 92, 246)',
+          'rgb(251, 191, 36)',
         ],
         borderWidth: 2,
       },
@@ -304,11 +307,41 @@ export default function AnalyticsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center py-20">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400"></div>
-            <p className="mt-4 text-gray-400">Loading analytics...</p>
+      <div className="min-h-screen bg-black">
+        {/* Navigation */}
+        <header className="fixed top-0 left-0 right-0 z-50">
+          <div className="flex items-center justify-between px-6 py-4 backdrop-blur-xl bg-black/50 border-b border-white/10">
+            <div className="flex items-center gap-4">
+              <Link href="/" className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#ff9e00] to-[#fbbf24] flex items-center justify-center glow-orange">
+                  <Zap className="h-4 w-4 text-black" />
+                </div>
+                <span className="font-bold text-white text-lg">PermiPay</span>
+              </Link>
+            </div>
+            <nav className="hidden md:flex items-center gap-8">
+              <Link href="/" className="text-sm text-gray-300 hover:text-white transition-colors flex items-center gap-2">
+                <Home className="w-4 h-4" />
+                Home
+              </Link>
+              <Link href="/analytics" className="text-sm text-[#ff9e00] transition-colors flex items-center gap-2">
+                <BarChart3 className="w-4 h-4" />
+                Analytics
+              </Link>
+              <Link href="/dashboard" className="text-sm text-gray-300 hover:text-white transition-colors">
+                Dashboard
+              </Link>
+            </nav>
+            <ConnectButton />
+          </div>
+        </header>
+
+        <div className="pt-20 p-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center py-20">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#ff9e00]"></div>
+              <p className="mt-4 text-gray-400">Loading analytics...</p>
+            </div>
           </div>
         </div>
       </div>
@@ -317,19 +350,49 @@ export default function AnalyticsPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-8 text-center">
-            <h2 className="text-2xl font-bold text-yellow-400 mb-4">⚠️ Indexer Not Configured</h2>
-            <p className="text-gray-300 mb-6">{error}</p>
-            <div className="bg-slate-800/50 rounded-lg p-6 text-left">
-              <h3 className="text-white font-semibold mb-3">📝 Setup Instructions:</h3>
-              <ol className="text-gray-300 space-y-2 text-sm">
-                <li>1. Install Envio CLI (see <code className="bg-slate-700 px-2 py-1 rounded">envio/DEPLOYMENT_GUIDE.md</code>)</li>
-                <li>2. Deploy indexer: <code className="bg-slate-700 px-2 py-1 rounded">cd envio && envio deploy</code></li>
-                <li>3. Add GraphQL endpoint to <code className="bg-slate-700 px-2 py-1 rounded">.env.local</code></li>
-                <li>4. Restart the app to see live analytics</li>
-              </ol>
+      <div className="min-h-screen bg-black">
+        {/* Navigation */}
+        <header className="fixed top-0 left-0 right-0 z-50">
+          <div className="flex items-center justify-between px-6 py-4 backdrop-blur-xl bg-black/50 border-b border-white/10">
+            <div className="flex items-center gap-4">
+              <Link href="/" className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#ff9e00] to-[#fbbf24] flex items-center justify-center glow-orange">
+                  <Zap className="h-4 w-4 text-black" />
+                </div>
+                <span className="font-bold text-white text-lg">PermiPay</span>
+              </Link>
+            </div>
+            <nav className="hidden md:flex items-center gap-8">
+              <Link href="/" className="text-sm text-gray-300 hover:text-white transition-colors flex items-center gap-2">
+                <Home className="w-4 h-4" />
+                Home
+              </Link>
+              <Link href="/analytics" className="text-sm text-[#ff9e00] transition-colors flex items-center gap-2">
+                <BarChart3 className="w-4 h-4" />
+                Analytics
+              </Link>
+              <Link href="/dashboard" className="text-sm text-gray-300 hover:text-white transition-colors">
+                Dashboard
+              </Link>
+            </nav>
+            <ConnectButton />
+          </div>
+        </header>
+
+        <div className="pt-20 p-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-8 text-center">
+              <h2 className="text-2xl font-bold text-yellow-400 mb-4">⚠️ Indexer Not Configured</h2>
+              <p className="text-gray-300 mb-6">{error}</p>
+              <div className="bg-slate-800/50 rounded-lg p-6 text-left">
+                <h3 className="text-white font-semibold mb-3">📝 Setup Instructions:</h3>
+                <ol className="text-gray-300 space-y-2 text-sm">
+                  <li>1. Install Envio CLI (see <code className="bg-slate-700 px-2 py-1 rounded">envio/DEPLOYMENT_GUIDE.md</code>)</li>
+                  <li>2. Deploy indexer: <code className="bg-slate-700 px-2 py-1 rounded">cd envio && envio deploy</code></li>
+                  <li>3. Add GraphQL endpoint to <code className="bg-slate-700 px-2 py-1 rounded">.env.local</code></li>
+                  <li>4. Restart the app to see live analytics</li>
+                </ol>
+              </div>
             </div>
           </div>
         </div>
@@ -338,23 +401,61 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">📊 Analytics Dashboard</h1>
-          <p className="text-gray-400">Real-time insights powered by Envio</p>
-        </div>
-
-        {/* Global Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-          <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-500/30 rounded-xl p-6">
-            <p className="text-blue-300 text-sm font-medium mb-1">Total Permissions</p>
-            <p className="text-3xl font-bold text-white">{globalStats?.totalPermissionsGranted || '0'}</p>
+    <div className="min-h-screen bg-black">
+      {/* Navigation */}
+      <header className="fixed top-0 left-0 right-0 z-50">
+        <div className="flex items-center justify-between px-6 py-4 backdrop-blur-xl bg-black/50 border-b border-white/10">
+          <div className="flex items-center gap-4">
+            <Link href="/" className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#ff9e00] to-[#fbbf24] flex items-center justify-center glow-orange">
+                <Zap className="h-4 w-4 text-black" />
+              </div>
+              <span className="font-bold text-white text-lg">PermiPay</span>
+            </Link>
           </div>
-          
-          <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 border border-green-500/30 rounded-xl p-6">
-            <p className="text-green-300 text-sm font-medium mb-1">Active Permissions</p>
+          <nav className="hidden md:flex items-center gap-8">
+            <Link href="/" className="text-sm text-gray-300 hover:text-white transition-colors flex items-center gap-2">
+              <Home className="w-4 h-4" />
+              Home
+            </Link>
+            <Link href="/analytics" className="text-sm text-[#ff9e00] font-semibold transition-colors flex items-center gap-2">
+              <BarChart3 className="w-4 h-4" />
+              Analytics
+            </Link>
+            <Link href="/dashboard" className="text-sm text-gray-300 hover:text-white transition-colors">
+              Dashboard
+            </Link>
+          </nav>
+          <ConnectButton />
+        </div>
+      </header>
+
+      <div className="pt-20 p-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Header with Back Button */}
+          <div className="mb-8 flex items-center gap-4">
+            <Link 
+              href="/" 
+              className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-gray-300 hover:text-white transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </Link>
+            <div className="flex-1">
+              <h1 className="text-4xl font-bold text-white mb-2 bg-clip-text text-transparent bg-gradient-to-r from-[#ff9e00] to-[#fbbf24]">📊 Analytics Dashboard</h1>
+              <p className="text-gray-400">Real-time insights powered by Envio</p>
+            </div>
+          </div>
+
+          {/* Global Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+            <div className="bg-gradient-to-br from-[#ff9e00]/20 to-[#fbbf24]/20 border border-[#ff9e00]/30 rounded-xl p-6 glow-orange">
+              <p className="text-[#fbbf24] text-sm font-medium mb-1">Total Permissions</p>
+              <p className="text-3xl font-bold text-white">{globalStats?.totalPermissionsGranted || '0'}</p>
+            </div>
+            
+            <div className="bg-gradient-to-br from-green-500/20 to-green-600/20 border border-green-500/30 rounded-xl p-6">
+              <p className="text-green-300 text-sm font-medium mb-1">Active Permissions</p>
             <p className="text-3xl font-bold text-white">{globalStats?.activePermissions || '0'}</p>
           </div>
           
@@ -415,7 +516,7 @@ export default function AnalyticsPage() {
                 {permissions.map((perm) => (
                   <div key={perm.id} className="bg-slate-700/50 border border-slate-600 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-blue-400 font-mono text-sm">
+                      <span className="text-[#fbbf24] font-mono text-sm">
                         {perm.user.slice(0, 6)}...{perm.user.slice(-4)}
                       </span>
                       <span className="text-green-400 text-xs px-2 py-1 bg-green-500/20 rounded">Active</span>
@@ -453,16 +554,16 @@ export default function AnalyticsPage() {
               {permissions.map((perm) => (
                 <div key={perm.id} className="bg-slate-700/50 border border-slate-600 rounded-lg p-4">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-blue-400 font-mono text-sm">
+                    <span className="text-[#fbbf24] font-mono text-sm">
                       {perm.user.slice(0, 6)}...{perm.user.slice(-4)}
                     </span>
-                    <span className="text-purple-400 text-xs font-semibold">
+                    <span className="text-[#ff9e00] text-xs font-semibold">
                       ${(Number(perm.spentAmount) / 1_000_000).toFixed(2)} spent
                     </span>
                   </div>
                   <div className="w-full bg-slate-600 rounded-full h-2 mb-2">
                     <div 
-                      className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all"
+                      className="bg-gradient-to-r from-[#ff9e00] to-[#fbbf24] h-2 rounded-full transition-all"
                       style={{ 
                         width: `${(Number(perm.spentAmount) / Number(perm.spendingLimit)) * 100}%` 
                       }}
@@ -501,7 +602,7 @@ export default function AnalyticsPage() {
                       <td className="py-3 font-mono text-sm">{execution.user.slice(0, 6)}...{execution.user.slice(-4)}</td>
                       <td className="py-3">
                         <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          execution.serviceType === 'CONTRACT_INSPECTOR' ? 'bg-blue-500/20 text-blue-300' :
+                          execution.serviceType === 'CONTRACT_INSPECTOR' ? 'bg-[#ff9e00]/20 text-[#fbbf24]' :
                           execution.serviceType === 'WALLET_REPUTATION' ? 'bg-green-500/20 text-green-300' :
                           'bg-purple-500/20 text-purple-300'
                         }`}>
@@ -517,7 +618,7 @@ export default function AnalyticsPage() {
                           href={`https://sepolia.etherscan.io/tx/${execution.transactionHash}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-400 hover:text-blue-300 text-sm"
+                          className="text-[#ff9e00] hover:text-[#fbbf24] text-sm"
                         >
                           View →
                         </a>
@@ -529,6 +630,7 @@ export default function AnalyticsPage() {
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   );

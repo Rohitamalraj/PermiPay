@@ -10,37 +10,37 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        border: "#ffffff1a",
-        input: "#ffffff1a",
-        ring: "#0052FF",
+        border: "#ff9e001a",
+        input: "#ff9e001a",
+        ring: "#ff9e00",
         background: "#000000",
         foreground: "#ffffff",
         primary: {
-          DEFAULT: "#0052FF",
-          foreground: "#ffffff",
+          DEFAULT: "#ff9e00",
+          foreground: "#000000",
         },
         secondary: {
-          DEFAULT: "#3387FF",
-          foreground: "#ffffff",
+          DEFAULT: "#fbbf24",
+          foreground: "#000000",
         },
         destructive: {
           DEFAULT: "#ef4444",
           foreground: "#ffffff",
         },
         muted: {
-          DEFAULT: "#ffffff0d",
+          DEFAULT: "#1a1a1a",
           foreground: "#9ca3af",
         },
         accent: {
-          DEFAULT: "#ffffff0d",
-          foreground: "#ffffff",
+          DEFAULT: "#ff9e00",
+          foreground: "#000000",
         },
         popover: {
-          DEFAULT: "#000000",
+          DEFAULT: "#0a0a0a",
           foreground: "#ffffff",
         },
         card: {
-          DEFAULT: "#ffffff0d",
+          DEFAULT: "#0a0a0a",
           foreground: "#ffffff",
         },
       },

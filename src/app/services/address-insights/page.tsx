@@ -95,7 +95,7 @@ export default function AddressInsightsPage() {
         {/* Header */}
         <div className="mb-12">
           <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#0052FF] to-[#3387FF] flex items-center justify-center">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#ff9e00] to-[#fbbf24] flex items-center justify-center">
               <Search className="h-6 w-6 text-white" />
             </div>
             <div>
@@ -106,11 +106,11 @@ export default function AddressInsightsPage() {
             </div>
           </div>
 
-          <Card className="bg-gradient-to-br from-[#0052FF]/10 to-[#3387FF]/10 border-[#0052FF]/30 p-6">
+          <Card className="bg-gradient-to-br from-[#ff9e00]/10 to-[#fbbf24]/10 border-[#ff9e00]/30 p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-400 mb-1">Service Cost</p>
-                <p className="text-3xl font-bold text-[#0052FF]">$0.50</p>
+                <p className="text-3xl font-bold text-[#ff9e00]">$0.50</p>
               </div>
               <div className="text-right">
                 <p className="text-sm text-gray-400 mb-1">Per Analysis</p>
@@ -130,12 +130,12 @@ export default function AddressInsightsPage() {
               value={walletAddress}
               onChange={(e) => setWalletAddress(e.target.value)}
               placeholder="0x..."
-              className="flex-1 px-6 py-4 bg-black/40 border border-white/10 rounded-lg text-white focus:outline-none focus:border-[#0052FF] text-lg"
+              className="flex-1 px-6 py-4 bg-black/40 border border-white/10 rounded-lg text-white focus:outline-none focus:border-[#ff9e00] text-lg"
             />
             <Button
               onClick={analyzeAddress}
               disabled={loading}
-              className="bg-gradient-to-r from-[#0052FF] to-[#3387FF] text-white hover:opacity-90 px-8 py-4 text-lg"
+              className="bg-gradient-to-r from-[#ff9e00] to-[#fbbf24] text-white hover:opacity-90 px-8 py-4 text-lg"
             >
               {loading ? (
                 "Analyzing..."
@@ -173,9 +173,9 @@ export default function AddressInsightsPage() {
               <p className="text-gray-400 font-mono text-sm mb-6">{insightData.address}</p>
               
               <div className="grid md:grid-cols-2 gap-6">
-                <div className="bg-gradient-to-br from-[#0052FF]/10 to-[#3387FF]/10 p-8 rounded-xl border border-[#0052FF]/30">
+                <div className="bg-gradient-to-br from-[#ff9e00]/10 to-[#fbbf24]/10 p-8 rounded-xl border border-[#ff9e00]/30">
                   <div className="flex items-center gap-3 mb-3">
-                    <Wallet className="h-6 w-6 text-[#0052FF]" />
+                    <Wallet className="h-6 w-6 text-[#ff9e00]" />
                     <span className="text-gray-400">ETH Balance</span>
                   </div>
                   <p className="text-4xl font-bold mb-2">{insightData.balance.eth.toFixed(4)} ETH</p>
@@ -184,7 +184,7 @@ export default function AddressInsightsPage() {
 
                 <div className="bg-white/5 p-8 rounded-xl border border-white/10">
                   <div className="flex items-center gap-3 mb-3">
-                    <DollarSign className="h-6 w-6 text-[#3387FF]" />
+                    <DollarSign className="h-6 w-6 text-[#fbbf24]" />
                     <span className="text-gray-400">Token Holdings</span>
                   </div>
                   <p className="text-4xl font-bold mb-2">{insightData.tokens.length}</p>
@@ -222,7 +222,7 @@ export default function AddressInsightsPage() {
 
                 <div className="bg-black/40 p-6 rounded-lg border border-white/10">
                   <div className="flex items-center gap-2 mb-2">
-                    <Clock className="h-4 w-4 text-[#0052FF]" />
+                    <Clock className="h-4 w-4 text-[#ff9e00]" />
                     <p className="text-gray-400 text-sm">Last Activity</p>
                   </div>
                   <p className="text-lg font-bold">
@@ -318,3 +318,4 @@ export default function AddressInsightsPage() {
     </div>
   );
 }
+

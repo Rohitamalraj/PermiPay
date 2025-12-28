@@ -74,7 +74,7 @@ export function ConnectButton() {
     <Button
       onClick={handleConnect}
       disabled={isPending}
-      className="gap-2"
+      className="gap-2 bg-gradient-to-r from-[#ff9e00] to-[#fbbf24] text-black font-semibold hover:opacity-90 glow-orange"
     >
       <Wallet className="h-4 w-4" />
       {isPending ? 'Connecting...' : 'Connect Wallet'}

@@ -177,7 +177,7 @@ export default function WalletReputationPage() {
         {/* Header */}
         <div className="mb-12">
           <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#0052FF] to-[#3387FF] flex items-center justify-center">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#ff9e00] to-[#fbbf24] flex items-center justify-center">
               <ShieldCheck className="h-6 w-6 text-white" />
             </div>
             <div>
@@ -189,11 +189,11 @@ export default function WalletReputationPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <Card className="bg-gradient-to-br from-[#0052FF]/10 to-[#3387FF]/10 border-[#0052FF]/30 p-6">
+            <Card className="bg-gradient-to-br from-[#ff9e00]/10 to-[#fbbf24]/10 border-[#ff9e00]/30 p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-400 mb-1">Service Cost</p>
-                  <p className="text-3xl font-bold text-[#0052FF]">$0.10</p>
+                  <p className="text-3xl font-bold text-[#ff9e00]">$0.10</p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-gray-400 mb-1">Per Analysis</p>
@@ -206,7 +206,7 @@ export default function WalletReputationPage() {
             </Card>
 
             {hasPermission && (
-              <Card className="bg-gradient-to-br from-green-500/10 to-blue-500/10 border-green-500/30 p-6">
+              <Card className="bg-gradient-to-br from-green-500/10 to-orange-500/10 border-green-500/30 p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-400 mb-1">Permission Status</p>
@@ -233,7 +233,7 @@ export default function WalletReputationPage() {
                 serviceType={ServiceType.WALLET_REPUTATION}
                 serviceName="Wallet Reputation"
                 serviceDescription="Advanced on-chain reputation scoring and risk assessment"
-                serviceIcon={<ShieldCheck className="h-5 w-5 text-blue-400" />}
+                serviceIcon={<ShieldCheck className="h-5 w-5 text-orange-400" />}
                 onPermissionGranted={() => {
                   setShowPermissionCard(false);
                   setError("");
@@ -258,12 +258,12 @@ export default function WalletReputationPage() {
               value={walletAddress}
               onChange={(e) => setWalletAddress(e.target.value)}
               placeholder="0x..."
-              className="flex-1 px-6 py-4 bg-black/40 border border-white/10 rounded-lg text-white focus:outline-none focus:border-[#0052FF] text-lg"
+              className="flex-1 px-6 py-4 bg-black/40 border border-white/10 rounded-lg text-white focus:outline-none focus:border-[#ff9e00] text-lg"
             />
             <Button
               onClick={analyzeWallet}
               disabled={loading}
-              className="bg-gradient-to-r from-[#0052FF] to-[#3387FF] text-white hover:opacity-90 px-8 py-4 text-lg"
+              className="bg-gradient-to-r from-[#ff9e00] to-[#fbbf24] text-white hover:opacity-90 px-8 py-4 text-lg"
             >
               {loading ? (
                 "Analyzing..."
@@ -292,7 +292,7 @@ export default function WalletReputationPage() {
                           href="https://faucet.circle.com/"
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded-lg text-sm text-blue-400 transition-colors"
+                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-orange-500/20 hover:bg-orange-500/30 border border-orange-500/30 rounded-lg text-sm text-orange-400 transition-colors"
                         >
                           Circle Faucet
                           <ExternalLink className="h-3 w-3" />
@@ -315,7 +315,7 @@ export default function WalletReputationPage() {
                 href={`https://sepolia.etherscan.io/tx/${transactionHash}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors"
+                className="flex items-center gap-2 text-orange-400 hover:text-orange-300 transition-colors"
               >
                 <span className="text-sm font-mono">
                   {transactionHash.slice(0, 6)}...{transactionHash.slice(-4)}
@@ -451,7 +451,7 @@ export default function WalletReputationPage() {
               <div className="grid md:grid-cols-3 gap-6">
                 <div className="bg-black/40 p-6 rounded-lg border border-white/10">
                   <div className="flex items-center gap-3 mb-3">
-                    <Activity className="h-5 w-5 text-[#0052FF]" />
+                    <Activity className="h-5 w-5 text-[#ff9e00]" />
                     <span className="text-gray-400">Transaction Count</span>
                   </div>
                   <p className="text-3xl font-bold">{reputationData.metrics.transactionCount.toLocaleString()}</p>
@@ -459,7 +459,7 @@ export default function WalletReputationPage() {
 
                 <div className="bg-black/40 p-6 rounded-lg border border-white/10">
                   <div className="flex items-center gap-3 mb-3">
-                    <Clock className="h-5 w-5 text-[#3387FF]" />
+                    <Clock className="h-5 w-5 text-[#fbbf24]" />
                     <span className="text-gray-400">Account Age</span>
                   </div>
                   <p className="text-3xl font-bold">{reputationData.metrics.accountAge}</p>
@@ -468,7 +468,7 @@ export default function WalletReputationPage() {
 
                 <div className="bg-black/40 p-6 rounded-lg border border-white/10">
                   <div className="flex items-center gap-3 mb-3">
-                    <TrendingUp className="h-5 w-5 text-[#0052FF]" />
+                    <TrendingUp className="h-5 w-5 text-[#ff9e00]" />
                     <span className="text-gray-400">Avg Transaction</span>
                   </div>
                   <p className="text-3xl font-bold">${reputationData.metrics.avgTransactionValue.toFixed(2)}</p>
@@ -506,10 +506,10 @@ export default function WalletReputationPage() {
                   <div
                     key={key}
                     className={`flex items-center gap-3 p-4 rounded-lg border ${
-                      value ? "bg-[#0052FF]/10 border-[#0052FF]/30" : "bg-white/5 border-white/10"
+                      value ? "bg-[#ff9e00]/10 border-[#ff9e00]/30" : "bg-white/5 border-white/10"
                     }`}
                   >
-                    <div className={`w-3 h-3 rounded-full ${value ? "bg-[#0052FF]" : "bg-gray-600"}`} />
+                    <div className={`w-3 h-3 rounded-full ${value ? "bg-[#ff9e00]" : "bg-gray-600"}`} />
                     <span className={value ? "text-white" : "text-gray-400"}>
                       {key.replace(/([A-Z])/g, " $1").trim()}
                     </span>
@@ -565,3 +565,4 @@ export default function WalletReputationPage() {
     </div>
   );
 }
+

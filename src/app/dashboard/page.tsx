@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useAccount, useReadContract } from 'wagmi';
 import Link from 'next/link';
+import { ArrowLeft, Home, BarChart3, Zap, User } from 'lucide-react';
+import { ConnectButton } from '@/components/wallet/ConnectButton';
 import { CONTRACTS } from '@/constants/chains';
 import { sepolia } from 'viem/chains';
 
@@ -200,19 +202,50 @@ export default function UserDashboard() {
 
   if (!isConnected) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-12 text-center">
-            <h1 className="text-3xl font-bold text-white mb-4">🔐 Connect Your Wallet</h1>
-            <p className="text-gray-400 mb-6">
-              Please connect your wallet to view your personal dashboard
-            </p>
-            <Link 
-              href="/"
-              className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors"
-            >
-              Go to Home
-            </Link>
+      <div className="min-h-screen bg-black">
+        {/* Navigation */}
+        <header className="fixed top-0 left-0 right-0 z-50">
+          <div className="flex items-center justify-between px-6 py-4 backdrop-blur-xl bg-black/50 border-b border-white/10">
+            <div className="flex items-center gap-4">
+              <Link href="/" className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#ff9e00] to-[#fbbf24] flex items-center justify-center glow-orange">
+                  <Zap className="h-4 w-4 text-black" />
+                </div>
+                <span className="font-bold text-white text-lg">PermiPay</span>
+              </Link>
+            </div>
+            <nav className="hidden md:flex items-center gap-8">
+              <Link href="/" className="text-sm text-gray-300 hover:text-white transition-colors flex items-center gap-2">
+                <Home className="w-4 h-4" />
+                Home
+              </Link>
+              <Link href="/analytics" className="text-sm text-gray-300 hover:text-white transition-colors flex items-center gap-2">
+                <BarChart3 className="w-4 h-4" />
+                Analytics
+              </Link>
+              <Link href="/dashboard" className="text-sm text-[#ff9e00] font-semibold transition-colors flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Dashboard
+              </Link>
+            </nav>
+            <ConnectButton />
+          </div>
+        </header>
+
+        <div className="pt-20 p-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-white/5 border border-white/10 rounded-xl p-12 text-center">
+              <h1 className="text-3xl font-bold text-white mb-4">🔐 Connect Your Wallet</h1>
+              <p className="text-gray-400 mb-6">
+                Please connect your wallet to view your personal dashboard
+              </p>
+              <Link 
+                href="/"
+                className="inline-block px-6 py-3 bg-gradient-to-r from-[#ff9e00] to-[#fbbf24] text-black font-semibold hover:opacity-90 rounded-lg transition-opacity"
+              >
+                Go to Home
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -221,11 +254,42 @@ export default function UserDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-            <p className="text-gray-400 mt-4">Loading your dashboard...</p>
+      <div className="min-h-screen bg-black">
+        {/* Navigation */}
+        <header className="fixed top-0 left-0 right-0 z-50">
+          <div className="flex items-center justify-between px-6 py-4 backdrop-blur-xl bg-black/50 border-b border-white/10">
+            <div className="flex items-center gap-4">
+              <Link href="/" className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#ff9e00] to-[#fbbf24] flex items-center justify-center glow-orange">
+                  <Zap className="h-4 w-4 text-black" />
+                </div>
+                <span className="font-bold text-white text-lg">PermiPay</span>
+              </Link>
+            </div>
+            <nav className="hidden md:flex items-center gap-8">
+              <Link href="/" className="text-sm text-gray-300 hover:text-white transition-colors flex items-center gap-2">
+                <Home className="w-4 h-4" />
+                Home
+              </Link>
+              <Link href="/analytics" className="text-sm text-gray-300 hover:text-white transition-colors flex items-center gap-2">
+                <BarChart3 className="w-4 h-4" />
+                Analytics
+              </Link>
+              <Link href="/dashboard" className="text-sm text-[#ff9e00] font-semibold transition-colors flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Dashboard
+              </Link>
+            </nav>
+            <ConnectButton />
+          </div>
+        </header>
+
+        <div className="pt-20 p-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ff9e00] mx-auto"></div>
+              <p className="text-gray-400 mt-4">Loading your dashboard...</p>
+            </div>
           </div>
         </div>
       </div>
@@ -233,19 +297,58 @@ export default function UserDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">👤 My Dashboard</h1>
-          <p className="text-gray-400">
-            Personal spending and usage overview for {address?.slice(0, 6)}...{address?.slice(-4)}
-          </p>
+    <div className="min-h-screen bg-black">
+      {/* Navigation */}
+      <header className="fixed top-0 left-0 right-0 z-50">
+        <div className="flex items-center justify-between px-6 py-4 backdrop-blur-xl bg-black/50 border-b border-white/10">
+          <div className="flex items-center gap-4">
+            <Link href="/" className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#ff9e00] to-[#fbbf24] flex items-center justify-center glow-orange">
+                <Zap className="h-4 w-4 text-black" />
+              </div>
+              <span className="font-bold text-white text-lg">PermiPay</span>
+            </Link>
+          </div>
+          <nav className="hidden md:flex items-center gap-8">
+            <Link href="/" className="text-sm text-gray-300 hover:text-white transition-colors flex items-center gap-2">
+              <Home className="w-4 h-4" />
+              Home
+            </Link>
+            <Link href="/analytics" className="text-sm text-gray-300 hover:text-white transition-colors flex items-center gap-2">
+              <BarChart3 className="w-4 h-4" />
+              Analytics
+            </Link>
+            <Link href="/dashboard" className="text-sm text-[#ff9e00] font-semibold transition-colors flex items-center gap-2">
+              <User className="w-4 h-4" />
+              Dashboard
+            </Link>
+          </nav>
+          <ConnectButton />
         </div>
+      </header>
 
-        {error && (
-          <div className="bg-red-500/20 border border-red-500 rounded-lg p-4 mb-6">
-            <p className="text-red-400">{error}</p>
+      <div className="pt-20 p-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Header with Back Button */}
+          <div className="mb-8 flex items-center gap-4">
+            <Link 
+              href="/" 
+              className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-gray-300 hover:text-white transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </Link>
+            <div className="flex-1">
+              <h1 className="text-4xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-[#ff9e00] to-[#fbbf24]">👤 My Dashboard</h1>
+              <p className="text-gray-400">
+                Personal spending and usage overview for {address?.slice(0, 6)}...{address?.slice(-4)}
+              </p>
+            </div>
+          </div>
+
+          {error && (
+            <div className="bg-red-500/20 border border-red-500 rounded-lg p-4 mb-6">
+              <p className="text-red-400">{error}</p>
           </div>
         )}
 
@@ -253,12 +356,12 @@ export default function UserDashboard() {
         {permission ? (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-500/30 rounded-xl p-6">
-                <p className="text-blue-300 text-sm font-medium mb-1">Total Spent</p>
+              <div className="bg-gradient-to-br from-[#ff9e00]/20 to-[#fbbf24]/20 border border-[#ff9e00]/30 rounded-xl p-6 glow-orange">
+                <p className="text-[#fbbf24] text-sm font-medium mb-1">Total Spent</p>
                 <p className="text-3xl font-bold text-white">
                   ${(Number(permission.spentAmount) / 1_000_000).toFixed(2)}
                 </p>
-                <p className="text-blue-300 text-xs mt-1">
+                <p className="text-[#fbbf24] text-xs mt-1">
                   of ${(Number(permission.spendingLimit) / 1_000_000).toFixed(2)} limit
                 </p>
               </div>
@@ -307,7 +410,7 @@ export default function UserDashboard() {
               </div>
               <div className="w-full bg-slate-700 rounded-full h-4">
                 <div 
-                  className="bg-gradient-to-r from-blue-500 to-purple-500 h-4 rounded-full transition-all flex items-center justify-center text-xs text-white font-semibold"
+                  className="bg-gradient-to-r from-[#ff9e00] to-[#fbbf24] h-4 rounded-full transition-all flex items-center justify-center text-xs text-black font-semibold"
                   style={{ 
                     width: `${Math.min((Number(permission.spentAmount) / Number(permission.spendingLimit)) * 100, 100)}%` 
                   }}
@@ -392,7 +495,7 @@ export default function UserDashboard() {
                           href={`https://sepolia.etherscan.io/tx/${exec.transactionHash}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-400 hover:text-blue-300 font-medium"
+                          className="text-[#ff9e00] hover:text-[#fbbf24] font-medium"
                         >
                           View →
                         </a>
@@ -404,6 +507,7 @@ export default function UserDashboard() {
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   );
