@@ -1,8 +1,8 @@
 # PermiPay 🚀
 
-**Automated Web3 Payment Platform with Advanced Permissions**
+**Permission-Metered Web3 Analytics Platform**
 
-PermiPay is a decentralized payment automation platform that enables users to grant pre-approved spending permissions for Web3 services, eliminating the need for repeated transaction approvals. Built on Ethereum with cutting-edge Account Abstraction (ERC-4337) and MetaMask's ERC-7715 Advanced Permissions.
+PermiPay is a permission-metered Web3 analytics dApp that replaces flat subscriptions with wallet-controlled, pay-per-use access to advanced DeFi insights. Built on MetaMask Advanced Permissions (ERC-7715), it lets users grant a bounded USDC allowance (for example, $5-$10 per month) that the app can spend only when they actually trigger premium features like Contract Inspector, Wallet Audit, and Wallet Reputation analysis. Each advanced query pulls a small, fixed fee (from $0.05 to $0.15) from that allowance, while users retain full control: they can cap spend, see every charge in a real-time dashboard, and revoke permissions at any time—instead of being locked into recurring subscription plans.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Next.js](https://img.shields.io/badge/Next.js-15.1.0-black)](https://nextjs.org/)

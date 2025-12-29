@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { ArrowRight, Check, Zap, Shield, BarChart3, Play } from 'lucide-react';
 import { ConnectButton } from '@/components/wallet/ConnectButton';
@@ -24,11 +25,18 @@ export default function Home() {
           <div className="flex items-center gap-2">
             <Link href="/" className="flex items-center gap-3">
               <motion.div 
-                className="w-8 h-8 rounded-full bg-gradient-to-br from-[#ff9e00] to-[#fbbf24] flex items-center justify-center glow-orange"
-                whileHover={{ scale: 1.1, rotate: 180 }}
+                className="relative w-12 h-12 flex items-center justify-center"
+                whileHover={{ scale: 1.1 }}
                 transition={{ duration: 0.3 }}
               >
-                <Zap className="h-4 w-4 text-black" />
+                <Image 
+                  src="/Permipay_Logo.png" 
+                  alt="PermiPay Logo" 
+                  width={48} 
+                  height={48}
+                  className="object-contain"
+                  style={{ filter: 'brightness(1.2)' }}
+                />
               </motion.div>
               <span className="font-bold text-white text-lg">PermiPay</span>
             </Link>
