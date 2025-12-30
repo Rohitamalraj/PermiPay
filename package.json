@@ -59,7 +59,6 @@
     "wagmi": "^2.13.9"
   },
   "devDependencies": {
-    "@next/swc-win32-x64-msvc": "^16.0.10",
     "@nomicfoundation/hardhat-ethers": "^3.0.0",
     "@types/node": "^22",
     "@types/react": "^18",
