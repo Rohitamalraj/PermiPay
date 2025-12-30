@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   transpilePackages: ['framer-motion'],
+  turbopack: {},
   webpack: (config) => {
     config.externals.push('pino-pretty', 'encoding');
     config.resolve.fallback = {
